@@ -17,6 +17,7 @@ pub struct CapturedRequest {
     pub method: String,
     pub url: String,
     pub resource_type: String,
+    pub status: Option<u16>,
     pub authorization: Option<String>,
     pub api_key_header: Option<String>,
 }
@@ -24,6 +25,10 @@ pub struct CapturedRequest {
 impl CapturedRequest {
     pub fn is_api_call(&self) -> bool {
         matches!(self.resource_type.as_str(), "xhr" | "fetch")
+    }
+
+    pub fn is_gated(&self) -> bool {
+        matches!(self.status, Some(401 | 403 | 429))
     }
 
     pub fn auth_scheme(&self) -> Option<String> {
@@ -39,8 +44,13 @@ pub struct MainResponse {
     pub headers: Vec<(String, String)>,
 }
 
+struct Pending {
+    request_id: String,
+    request: CapturedRequest,
+}
+
 pub struct NetworkCapture {
-    requests: Arc<Mutex<Vec<CapturedRequest>>>,
+    pending: Arc<Mutex<Vec<Pending>>>,
     main: Arc<Mutex<Option<MainResponse>>>,
     tasks: Vec<JoinHandle<()>>,
 }
@@ -50,33 +60,39 @@ impl NetworkCapture {
         let mut sent = page.event_listener::<EventRequestWillBeSent>().await.ok()?;
         let mut received = page.event_listener::<EventResponseReceived>().await.ok()?;
 
-        let requests = Arc::new(Mutex::new(Vec::new()));
+        let pending = Arc::new(Mutex::new(Vec::new()));
         let main = Arc::new(Mutex::new(None));
-        let request_sink = Arc::clone(&requests);
-        let main_sink = Arc::clone(&main);
+        let sent_sink = Arc::clone(&pending);
+        let received_pending = Arc::clone(&pending);
+        let received_main = Arc::clone(&main);
 
         let tasks = vec![
             tokio::spawn(async move {
                 while let Some(event) = sent.next().await {
-                    request_sink.lock().await.push(as_captured(&event));
+                    record_request(&event, &sent_sink).await;
                 }
             }),
             tokio::spawn(async move {
                 while let Some(event) = received.next().await {
-                    store_main_response(&event, &main_sink).await;
+                    record_response(&event, &received_pending, &received_main).await;
                 }
             }),
         ];
 
         Some(Self {
-            requests,
+            pending,
             main,
             tasks,
         })
     }
 
     pub async fn requests(&self) -> Vec<CapturedRequest> {
-        self.requests.lock().await.clone()
+        self.pending
+            .lock()
+            .await
+            .iter()
+            .map(|entry| entry.request.clone())
+            .collect()
     }
 
     pub async fn main_response(&self) -> Option<MainResponse> {
@@ -92,17 +108,37 @@ impl Drop for NetworkCapture {
     }
 }
 
-async fn store_main_response(
-    event: &EventResponseReceived,
-    sink: &Arc<Mutex<Option<MainResponse>>>,
-) {
-    if event.r#type != ResourceType::Document {
-        return;
-    }
-    *sink.lock().await = Some(MainResponse {
-        status: event.response.status.clamp(0, MAX_STATUS) as u16,
-        headers: as_pairs(&event.response.headers),
+async fn record_request(event: &EventRequestWillBeSent, sink: &Arc<Mutex<Vec<Pending>>>) {
+    sink.lock().await.push(Pending {
+        request_id: event.request_id.inner().clone(),
+        request: as_captured(event),
     });
+}
+
+async fn record_response(
+    event: &EventResponseReceived,
+    pending: &Arc<Mutex<Vec<Pending>>>,
+    main: &Arc<Mutex<Option<MainResponse>>>,
+) {
+    let status = event.response.status.clamp(0, MAX_STATUS) as u16;
+    let request_id = event.request_id.inner().clone();
+    attach_status(pending, &request_id, status).await;
+    if event.r#type == ResourceType::Document {
+        *main.lock().await = Some(MainResponse {
+            status,
+            headers: as_pairs(&event.response.headers),
+        });
+    }
+}
+
+async fn attach_status(pending: &Arc<Mutex<Vec<Pending>>>, request_id: &str, status: u16) {
+    let mut guard = pending.lock().await;
+    if let Some(entry) = guard
+        .iter_mut()
+        .find(|entry| entry.request_id == request_id)
+    {
+        entry.request.status = Some(status);
+    }
 }
 
 fn as_captured(event: &EventRequestWillBeSent) -> CapturedRequest {
@@ -111,6 +147,7 @@ fn as_captured(event: &EventRequestWillBeSent) -> CapturedRequest {
         method: event.request.method.to_lowercase(),
         url: event.request.url.clone(),
         resource_type: label(event.r#type.as_ref()),
+        status: None,
         authorization: header_value(&headers, "authorization"),
         api_key_header: api_key_name(&headers),
     }
@@ -120,12 +157,13 @@ fn as_captured(event: &EventRequestWillBeSent) -> CapturedRequest {
 mod tests {
     use super::CapturedRequest;
 
-    fn request(resource_type: &str, authorization: Option<&str>) -> CapturedRequest {
+    fn request(resource_type: &str, status: Option<u16>) -> CapturedRequest {
         CapturedRequest {
             method: "get".to_owned(),
             url: "https://example.com/api/v1/me".to_owned(),
             resource_type: resource_type.to_owned(),
-            authorization: authorization.map(ToOwned::to_owned),
+            status,
+            authorization: Some("Bearer abc.def".to_owned()),
             api_key_header: None,
         }
     }
@@ -139,12 +177,22 @@ mod tests {
 
     #[test]
     fn the_scheme_is_the_first_token_of_the_header() {
-        let scheme = request("xhr", Some("Bearer abc.def")).auth_scheme();
-        assert_eq!(scheme, Some("bearer".to_owned()));
+        assert_eq!(
+            request("xhr", None).auth_scheme(),
+            Some("bearer".to_owned())
+        );
     }
 
     #[test]
-    fn a_request_without_authorization_has_no_scheme() {
-        assert_eq!(request("xhr", None).auth_scheme(), None);
+    fn a_forbidden_or_rate_limited_response_is_gated() {
+        assert!(request("xhr", Some(403)).is_gated());
+        assert!(request("xhr", Some(401)).is_gated());
+        assert!(request("xhr", Some(429)).is_gated());
+    }
+
+    #[test]
+    fn a_healthy_or_unknown_response_is_not_gated() {
+        assert!(!request("xhr", Some(200)).is_gated());
+        assert!(!request("xhr", None).is_gated());
     }
 }

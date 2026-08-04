@@ -40,6 +40,7 @@ impl PageRenderer for ChromiumPageRenderer {
                 .map(as_observed)
                 .collect(),
             storage_keys: page.storage_keys,
+            wasm_modules: wasm_modules(&page.captured),
         })
     }
 }
@@ -48,7 +49,21 @@ fn as_observed(request: &CapturedRequest) -> ObservedRequest {
     ObservedRequest {
         method: request.method.clone(),
         url: request.url.clone(),
+        status: request.status,
+        gated: request.is_gated(),
         auth_scheme: request.auth_scheme(),
         api_key_header: request.api_key_header.clone(),
     }
+}
+
+fn wasm_modules(captured: &[CapturedRequest]) -> Vec<String> {
+    let mut modules: Vec<String> = captured
+        .iter()
+        .map(|request| request.url.split(['?', '#']).next().unwrap_or(&request.url))
+        .filter(|url| url.to_lowercase().ends_with(".wasm"))
+        .map(ToOwned::to_owned)
+        .collect();
+    modules.sort();
+    modules.dedup();
+    modules
 }

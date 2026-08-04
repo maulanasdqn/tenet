@@ -25,6 +25,8 @@ pub struct FetchedDocument {
 pub struct ObservedRequest {
     pub method: String,
     pub url: String,
+    pub status: Option<u16>,
+    pub gated: bool,
     pub auth_scheme: Option<String>,
     pub api_key_header: Option<String>,
 }
@@ -34,6 +36,7 @@ pub struct RenderedDocument {
     pub document: FetchedDocument,
     pub observed: Vec<ObservedRequest>,
     pub storage_keys: Vec<String>,
+    pub wasm_modules: Vec<String>,
 }
 
 #[derive(Debug, Clone)]

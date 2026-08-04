@@ -5,7 +5,8 @@ use tenet_web::PageSnapshot;
 
 use crate::application::challenge::challenge_findings;
 use crate::application::harvest::harvest_scripts;
-use crate::application::observed::{observed_endpoints, observed_findings};
+use crate::application::observed::observed_endpoints;
+use crate::application::observed_findings::observed_findings;
 use crate::application::web_analysis::{analyse, AnalysisInput};
 use crate::domain::ports::{PageFetcher, PageRenderer, TargetAnalyzer};
 use crate::domain::work::{Analysis, ArtifactRecord, ScanClaim};

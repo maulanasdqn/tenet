@@ -5,6 +5,7 @@ pub mod analyze_web_target;
 pub mod challenge;
 pub mod harvest;
 pub mod observed;
+pub mod observed_findings;
 pub mod run_batch;
 pub mod unavailable_target;
 pub mod web_analysis;
