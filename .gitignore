@@ -10,3 +10,7 @@ examples/*/target
 examples/rkm-sec-native/*.so
 examples/rkm-sec-native/*.apk
 examples/rkm-sec-native/pkg/
+
+# frontend
+tenet-ui/node_modules
+tenet-ui/dist

@@ -1,6 +1,7 @@
 use axum::middleware;
 use axum::routing::{get, post};
 use axum::Router;
+use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -26,6 +27,7 @@ pub fn router(state: AppState) -> Router {
         .route("/healthz", get(handlers::health))
         .merge(SwaggerUi::new("/docs").url("/openapi/gateway.json", ApiDoc::openapi()))
         .merge(protected)
+        .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }

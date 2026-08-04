@@ -49,6 +49,10 @@ curl localhost:8080/v1/scans/$SCAN/openapi   -H 'x-api-key: dev-key' > api.json
 Swagger UI is at `localhost:8080/docs`. Every route except `/healthz` and the docs wants
 `x-api-key` (or `Authorization: Bearer <key>`), matched against `API_KEY`.
 
+Prefer a UI? [`tenet-ui`](tenet-ui/) is a React SPA (TanStack Router/Query/Table + shadcn) that
+drives the gateway — `cd tenet-ui && pnpm install && pnpm dev`. The gateway sends permissive CORS so
+the SPA can reach it.
+
 `scripts/sample-scan.sh <target> <engine>` does all of the above in one go and prints a readable
 report. [`examples/shopee.md`](examples/shopee.md) is a real run against a production SPA — 1
 endpoint with `http`, 58 with `browser`. [`examples/anti-bot.md`](examples/anti-bot.md) is an

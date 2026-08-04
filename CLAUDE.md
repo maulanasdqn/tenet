@@ -41,6 +41,11 @@ generation), `tenet-mobile` (native APK/`.so` reverse engineering).
 
 Services: `tenet-gateway` (HTTP 8080), `tenet-analyzer` (no listener, polls Postgres).
 
+`tenet-ui/` is a standalone Vite + React + TypeScript frontend, not a Cargo member — it drives the
+gateway over HTTP (TanStack Router/Query/Table + shadcn). The gateway carries a permissive
+`CorsLayer` so the SPA can call it cross-origin. Build/lint it with `pnpm`, never `cargo`; its files
+are exempt from the Rust conventions (`check-conventions.sh` only scans `tenet-*/src/*.rs`).
+
 `tenet-web` is pure: it takes fetched bytes and returns findings and endpoints. It never opens a
 socket. Fetching belongs to the analyzer's infrastructure, which keeps the engine testable without
 a network and keeps signatures cheap to add.
