@@ -19,7 +19,20 @@ pub struct RenderSettings {
     pub viewport_height: u32,
     pub nav_timeout_seconds: u64,
     pub settle_ms: u64,
+    pub settle_jitter_ms: u64,
     pub quiet_ms: u64,
+    pub stealth: bool,
+    pub region: String,
+}
+
+impl RenderSettings {
+    pub fn region(&self) -> Option<&str> {
+        let trimmed = self.region.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+        Some(trimmed)
+    }
 }
 
 impl RenderSettings {
@@ -52,7 +65,10 @@ mod tests {
             viewport_height: 800,
             nav_timeout_seconds: 30,
             settle_ms: 1500,
+            settle_jitter_ms: 0,
             quiet_ms: 500,
+            stealth: true,
+            region: String::new(),
         }
     }
 
@@ -66,5 +82,14 @@ mod tests {
     fn a_websocket_url_marks_the_browser_as_remote() {
         assert!(settings("", "ws://localhost:9222/devtools/browser/x").is_remote());
         assert!(!settings("", "").is_remote());
+    }
+
+    #[test]
+    fn a_blank_region_is_treated_as_absent() {
+        let mut config = settings("", "");
+        config.region = "  ".to_owned();
+        assert_eq!(config.region(), None);
+        config.region = "id".to_owned();
+        assert_eq!(config.region(), Some("id"));
     }
 }

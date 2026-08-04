@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 tenet-errors.workspace = true
+tenet-stealth.workspace = true
 chromiumoxide.workspace = true
 futures-util.workspace = true
 tempfile.workspace = true

@@ -106,6 +106,9 @@ fn render_settings(config: &Config) -> RenderSettings {
         viewport_height: config.browser_viewport_height,
         nav_timeout_seconds: config.browser_nav_timeout_seconds,
         settle_ms: config.browser_settle_ms,
+        settle_jitter_ms: config.browser_settle_jitter_ms,
         quiet_ms: config.browser_quiet_ms,
+        stealth: config.browser_stealth,
+        region: config.browser_region.clone(),
     }
 }

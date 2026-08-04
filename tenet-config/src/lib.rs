@@ -8,6 +8,7 @@ pub use tokio_util::sync::CancellationToken;
 pub use tracing_setup::init_tracing;
 
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Config {
     pub database_url: String,
     pub db_max_connections: u32,
@@ -33,5 +34,8 @@ pub struct Config {
     pub browser_viewport_height: u32,
     pub browser_nav_timeout_seconds: u64,
     pub browser_settle_ms: u64,
+    pub browser_settle_jitter_ms: u64,
     pub browser_quiet_ms: u64,
+    pub browser_stealth: bool,
+    pub browser_region: String,
 }

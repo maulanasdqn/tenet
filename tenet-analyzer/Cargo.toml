@@ -9,6 +9,7 @@ tenet-errors.workspace = true
 tenet-config.workspace = true
 tenet-database.workspace = true
 tenet-web.workspace = true
+tenet-stealth.workspace = true
 tenet-browser.workspace = true
 tenet-mobile.workspace = true
 tokio.workspace = true

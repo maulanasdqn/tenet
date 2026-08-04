@@ -2700,6 +2700,7 @@ dependencies = [
  "tenet-database",
  "tenet-errors",
  "tenet-mobile",
+ "tenet-stealth",
  "tenet-types",
  "tenet-web",
  "tokio",
@@ -2716,6 +2717,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tenet-errors",
+ "tenet-stealth",
  "tokio",
  "tracing",
  "url",
@@ -2793,6 +2795,10 @@ dependencies = [
  "serde_json",
  "tenet-types",
 ]
+
+[[package]]
+name = "tenet-stealth"
+version = "0.1.0"
 
 [[package]]
 name = "tenet-types"

@@ -62,10 +62,38 @@ Three results worth calling out:
 
 ## Bot protection is visible in the results
 
-An earlier attempt was redirected to `https://shopee.co.id/verify/traffic/error?home_url=...`, the
-traffic-verification interstitial. The scan still succeeded and still reported the trackers that
-loaded on the challenge page — it simply found fewer of the real endpoints. If a browser scan comes
-back thin, check the rendered artifact's url before assuming the site has no API.
+Shopee redirects the final page url to `https://shopee.co.id/verify/traffic/error?home_url=...`, its
+traffic-verification interstitial — but the homepage's API calls still fire during the settle window
+before the bounce, so the scan captures ~16 real endpoints *and* records the challenge. Tenet flags
+this as a `bot-protection` finding:
+
+```
+technology  Shopee traffic verification  bot-protection  0.90
+  evidence: redirected to https://shopee.co.id/verify/traffic/error?home_url=...
+```
+
+That finding is the point: a thin scan is now self-explaining instead of looking like a site with no
+API.
+
+### Does stealth help here?
+
+`BROWSER_STEALTH=1` (the default) normalizes the browser fingerprint — six scans, stealth off vs on
+with `BROWSER_REGION=id`, all still hit the same verification redirect and all still captured ~16 API
+endpoints. On this target the interstitial fires regardless, so stealth neither helped nor hurt. Two
+honest caveats: these runs used a *remote* Chrome over `CHROME_WS_URL`, where the launch-flag half of
+stealth does not apply (only the per-page masking does); and stealth normalizes a browser, it does
+not solve a challenge.
+
+The per-page masking itself is verifiable. Pointed at a fixture that reports what the page sees, the
+observed request changes with stealth on:
+
+```
+stealth off:  /api/probe/wd_false/lang_en_US/...
+stealth on:   /api/probe/wd_false/lang_id_ID_id_en/...   (region=id)
+```
+
+The user agent, `navigator.webdriver`, languages, plugins and WebGL strings are overridden before
+the page's own scripts run — it just is not enough to get past Shopee's verification on its own.
 
 ## Where the noise is
 

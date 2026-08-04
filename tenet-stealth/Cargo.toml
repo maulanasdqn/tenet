@@ -1,0 +1,7 @@
+[package]
+name = "tenet-stealth"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true

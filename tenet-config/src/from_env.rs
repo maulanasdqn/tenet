@@ -31,7 +31,10 @@ impl Config {
             browser_viewport_height: env_parse("BROWSER_VIEWPORT_HEIGHT", "800")?,
             browser_nav_timeout_seconds: env_parse("BROWSER_NAV_TIMEOUT_SECONDS", "30")?,
             browser_settle_ms: env_parse("BROWSER_SETTLE_MS", "2500")?,
+            browser_settle_jitter_ms: env_parse("BROWSER_SETTLE_JITTER_MS", "750")?,
             browser_quiet_ms: env_parse("BROWSER_QUIET_MS", "500")?,
+            browser_stealth: env_flag_default("BROWSER_STEALTH", "1"),
+            browser_region: env_or("BROWSER_REGION", ""),
         })
     }
 }

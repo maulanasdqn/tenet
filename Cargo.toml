@@ -6,6 +6,7 @@ members = [
   "tenet-config",
   "tenet-database",
   "tenet-web",
+  "tenet-stealth",
   "tenet-browser",
   "tenet-spec",
   "tenet-mobile",
@@ -63,6 +64,7 @@ tenet-errors = { path = "tenet-errors" }
 tenet-config = { path = "tenet-config" }
 tenet-database = { path = "tenet-database" }
 tenet-web = { path = "tenet-web" }
+tenet-stealth = { path = "tenet-stealth" }
 tenet-browser = { path = "tenet-browser" }
 tenet-spec = { path = "tenet-spec" }
 tenet-mobile = { path = "tenet-mobile" }

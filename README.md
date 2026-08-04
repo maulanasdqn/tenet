@@ -98,6 +98,21 @@ Chromium is found automatically, or set `CHROME_BIN`. To use a browser you alrea
 available the analyzer still starts and serves `http` scans; `browser` scans fail with a clear
 message. `BROWSER_ENABLED=0` turns the engine off outright.
 
+### Stealth
+
+Anti-bot systems single out automation by its fingerprint — the `navigator.webdriver` flag, a
+headless user agent, missing plugins, a giveaway WebGL renderer. `tenet-stealth` normalizes that
+fingerprint so a `browser` scan presents like an ordinary visitor: real user agent and client
+hints, `navigator.webdriver` reporting `false` (the value a genuine Chrome returns), plausible
+languages, plugins, vendor and WebGL strings, and a small randomized settle delay. It is on by
+default; `BROWSER_STEALTH=0` disables it and `BROWSER_REGION=id` sets a country-appropriate
+`Accept-Language`.
+
+This normalizes the browser — it does not solve CAPTCHAs or defeat every protection. When a target
+serves a challenge anyway, Tenet detects the interstitial and records a `bot-protection` finding, so
+a thin result is explained rather than mistaken for a site with no API. Use it only on targets you
+own or are authorised to assess, and respect their rate limits.
+
 Endpoint extraction reads four signals and keeps the strongest per `method path`: observed runtime
 calls (0.95, browser engine only), method calls (`axios.post("/api/v1/sessions")` → 0.85), fetch
 calls (0.7), and bare path literals matching `/api`, `/rest`, `/graphql`, `/gateway` or `/v1`
@@ -117,6 +132,7 @@ because a path constant is real evidence — that is what the 0.45 confidence is
 | `tenet-config` | `Config::from_env()`, tracing init, shutdown token |
 | `tenet-database` | Postgres pool |
 | `tenet-web` | Fingerprints, script harvesting, endpoint and auth extraction |
+| `tenet-stealth` | Fingerprint normalization, launch args, challenge detection (pure, no deps) |
 | `tenet-browser` | Chromium driver: renders a page and captures its live requests |
 | `tenet-spec` | OpenAPI 3.1 generation |
 | `tenet-mobile` | `BinaryAnalyzer` port and the pending implementation |
@@ -158,6 +174,9 @@ cargo test --workspace
   request bodies, so this is mostly a matter of recording them.
 - **Authenticated scanning.** The browser engine renders as an anonymous visitor. Driving a login
   first would expose the endpoints that only exist behind a session.
+- **Getting past a challenge.** Stealth normalizes the fingerprint but does not solve an
+  interstitial. Waiting out a JS challenge, or wiring a solver, would turn a detected
+  `bot-protection` finding into a completed scan.
 - **Telling an API from a CDN payload.** Every observed `fetch` is recorded, so content assets
   pulled at runtime sit alongside real API calls — on the Shopee sample that is 24 rows of noise
   against 21 useful ones. Classifying by response content type or origin role would fix it.

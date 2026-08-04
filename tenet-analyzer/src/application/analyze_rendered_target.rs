@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tenet_errors::AppError;
 use tenet_web::PageSnapshot;
 
+use crate::application::challenge::challenge_findings;
 use crate::application::harvest::harvest_scripts;
 use crate::application::observed::{observed_endpoints, observed_findings};
 use crate::application::web_analysis::{analyse, AnalysisInput};
@@ -41,12 +42,14 @@ impl TargetAnalyzer for AnalyzeRenderedTarget {
             document.headers.clone(),
             document.body.clone(),
         );
+        let mut findings = observed_findings(&rendered);
+        findings.extend(challenge_findings(&rendered.document));
         let analysis = analyse(AnalysisInput {
             page,
             scripts,
             artifacts,
             observed_endpoints: observed_endpoints(&rendered.observed),
-            observed_findings: observed_findings(&rendered),
+            observed_findings: findings,
         });
 
         tracing::info!(

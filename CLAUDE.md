@@ -35,8 +35,9 @@ to both `members` and `workspace.dependencies` in the root `Cargo.toml`.
 Shared crates: `tenet-types` (`TargetKind`, `Engine`, `ScanStatus`, `Finding`, `Endpoint`,
 `AuthScheme`, response envelopes), `tenet-errors` (`AppError` + `IntoResponse`), `tenet-config`
 (env loading, tracing init, shutdown token), `tenet-database` (pool), `tenet-web` (the static
-website engine), `tenet-browser` (the Chromium driver), `tenet-spec` (OpenAPI generation),
-`tenet-mobile` (binary analysis seam).
+website engine), `tenet-stealth` (fingerprint normalization + challenge detection),
+`tenet-browser` (the Chromium driver), `tenet-spec` (OpenAPI generation), `tenet-mobile`
+(binary analysis seam).
 
 Services: `tenet-gateway` (HTTP 8080), `tenet-analyzer` (no listener, polls Postgres).
 
@@ -48,6 +49,13 @@ a network and keeps signatures cheap to add.
 url and reports what it saw (`RenderedPage`: html, the main response, captured requests, storage
 keys). It does no analysis, so everything it returns flows through the same `tenet-web` core.
 Only the analyzer's `infrastructure/browser/` may depend on it.
+
+`tenet-stealth` is pure and has zero dependencies. It produces plain data — launch args, an
+injectable init script, a `StealthProfile` (user agent, client hints, languages, webgl strings)
+derived from the browser's real user agent, a deterministic settle-delay jitter, and
+`detect_challenge` — and never touches chromiumoxide. `tenet-browser` translates a `StealthProfile`
+into CDP calls in `stealth_apply.rs`; the analyzer maps a detected challenge to a finding. Keeping
+it dependency-free is deliberate: the whole crate is unit-testable without a browser.
 
 ## Deployment
 
@@ -117,6 +125,11 @@ that call, never fork the analysis.
   pumped on its own task or every command hangs. `Session` owns that task and flips an `alive`
   flag when the stream ends, which is how `ChromiumRenderer` notices a dead browser and relaunches.
   Event listeners are aborted on `Drop` — a `NetworkCapture` that outlives its page leaks a task.
+- Launch args: chromiumoxide's `Arg` stores the string verbatim and renders it as `--{arg}`, so a
+  flag must be passed WITHOUT its leading dashes (`disable-dev-shm-usage`, not
+  `--disable-dev-shm-usage`) or it reaches Chrome as `----disable-dev-shm-usage`. `STEALTH_ARGS`
+  keeps this convention. Launch args only apply to a browser Tenet launches, never to one reached
+  through `CHROME_WS_URL`; per-page masking (UA override, init script) applies to both.
 - Loop bodies inside a spawned task hit the nesting limit fast. Extract the body into a named
   function (`pump_handler`, `store_main_response`) rather than reaching for an `allow`.
 - Tests: pure functions carry `#[cfg(test)] mod tests` in the same file. Name a test after the
@@ -146,6 +159,17 @@ ever adds or outranks.
 The browser engine is optional. If `BROWSER_ENABLED=0`, or Chromium cannot be reached, the
 analyzer still serves `http` scans and wires an `UnavailableTarget` in place of the renderer, so
 `engine=browser` scans fail with a clear reason instead of silently downgrading to a weaker scan.
+
+Stealth (`BROWSER_STEALTH=1`, on by default) normalizes the fingerprint anti-bot uses to single out
+automation: it applies `tenet-stealth`'s launch args, overrides the user agent and client hints to
+match a real browser, and injects an init script that masks `navigator.webdriver` (to `false`, the
+value a genuine Chrome reports — not `undefined`), languages, plugins, vendor and the WebGL
+vendor/renderer. `BROWSER_REGION` (e.g. `id`) sets a plausible `Accept-Language` and
+`navigator.languages`. Whether a target's protection is actually defeated is target-specific;
+stealth normalizes the browser, it does not solve CAPTCHAs. `detect_challenge` runs on every
+rendered page and records a `bot-protection` finding when the target served an interstitial, so a
+thin scan is explained rather than mistaken for a site with no API. Only scan targets you own or
+are authorised to assess, and respect their rate limits.
 
 A transient failure with attempts left goes back to `queued`; anything else is `failed` with the
 error recorded on the row. Only `AppError::Unavailable` is transient.

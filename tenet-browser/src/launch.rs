@@ -10,18 +10,13 @@ use tokio::task::JoinHandle;
 
 use crate::settings::RenderSettings;
 
-const BASE_ARGS: [&str; 7] = [
-    "--disable-background-networking",
-    "--disable-background-timer-throttling",
-    "--disable-backgrounding-occluded-windows",
-    "--disable-renderer-backgrounding",
-    "--no-first-run",
-    "--no-default-browser-check",
-    "--disable-blink-features=AutomationControlled",
-];
+const FALLBACK_USER_AGENT: &str =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 \
+     (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 pub struct Session {
     pub browser: Browser,
+    pub reported_user_agent: String,
     alive: Arc<AtomicBool>,
     _handler: JoinHandle<()>,
     _user_data_dir: Option<TempDir>,
@@ -40,7 +35,7 @@ impl Session {
             .await
             .map_err(AppError::unavailable)?;
         tracing::info!(endpoint = %settings.chrome_ws_url, "connected to a remote chromium");
-        Ok(Self::pump(browser, handler, None))
+        Ok(Self::pump(browser, handler, None).await)
     }
 
     async fn launch(settings: &RenderSettings) -> Result<Self, AppError> {
@@ -54,10 +49,10 @@ impl Session {
             headful = settings.headful,
             "chromium launched"
         );
-        Ok(Self::pump(browser, handler, Some(user_data_dir)))
+        Ok(Self::pump(browser, handler, Some(user_data_dir)).await)
     }
 
-    fn pump(browser: Browser, mut handler: Handler, user_data_dir: Option<TempDir>) -> Self {
+    async fn pump(browser: Browser, mut handler: Handler, user_data_dir: Option<TempDir>) -> Self {
         let alive = Arc::new(AtomicBool::new(true));
         let flag = Arc::clone(&alive);
         let task = tokio::spawn(async move {
@@ -65,8 +60,10 @@ impl Session {
             flag.store(false, Ordering::Relaxed);
             tracing::error!("chromium handler stream ended, browser is dead");
         });
+        let reported_user_agent = reported_user_agent(&browser).await;
         Self {
             browser,
+            reported_user_agent,
             alive,
             _handler: task,
             _user_data_dir: user_data_dir,
@@ -75,6 +72,13 @@ impl Session {
 
     pub fn is_alive(&self) -> bool {
         self.alive.load(Ordering::Relaxed)
+    }
+}
+
+async fn reported_user_agent(browser: &Browser) -> String {
+    match browser.version().await {
+        Ok(version) if !version.user_agent.is_empty() => version.user_agent,
+        _ => FALLBACK_USER_AGENT.to_owned(),
     }
 }
 
@@ -98,13 +102,13 @@ fn build_config(
         builder = builder.with_head();
     }
     if settings.no_sandbox {
-        builder = builder.no_sandbox().arg("--disable-dev-shm-usage");
+        builder = builder.no_sandbox().arg("disable-dev-shm-usage");
     }
     if let Some(path) = settings.executable() {
         builder = builder.chrome_executable(path.as_str());
     }
-    for arg in BASE_ARGS {
-        builder = builder.arg(arg);
+    for arg in tenet_stealth::STEALTH_ARGS {
+        builder = builder.arg(*arg);
     }
 
     builder.build().map_err(AppError::internal)

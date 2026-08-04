@@ -3,12 +3,14 @@ use std::time::Duration;
 
 use chromiumoxide::Page;
 use tenet_errors::AppError;
+use tenet_stealth::StealthProfile;
 use tokio::sync::{Mutex, Semaphore};
 
 use crate::capture::NetworkCapture;
 use crate::launch::Session;
 use crate::page::RenderedPage;
 use crate::settings::RenderSettings;
+use crate::stealth_apply;
 
 const STORAGE_KEYS: &str = "Object.keys(window.localStorage || {})";
 
@@ -40,11 +42,21 @@ impl ChromiumRenderer {
             .await
             .map_err(AppError::unavailable)?;
 
+        self.disguise(&page, &session).await;
         let rendered = self.visit(&page, url).await;
         if let Err(err) = page.close().await {
             tracing::warn!(error = %err, "could not close the page");
         }
         rendered
+    }
+
+    async fn disguise(&self, page: &Page, session: &Session) {
+        if !self.settings.stealth {
+            return;
+        }
+        let profile =
+            StealthProfile::from_user_agent(&session.reported_user_agent, self.settings.region());
+        stealth_apply::apply(page, &profile).await;
     }
 
     async fn session(&self) -> Result<Arc<Session>, AppError> {
@@ -61,7 +73,12 @@ impl ChromiumRenderer {
     async fn visit(&self, page: &Page, url: &str) -> Result<RenderedPage, AppError> {
         let capture = NetworkCapture::watch(page).await;
         self.navigate(page, url).await?;
-        tokio::time::sleep(Duration::from_millis(self.settings.settle_ms)).await;
+        let settle = tenet_stealth::settle_delay(
+            self.settings.settle_ms,
+            self.settings.settle_jitter_ms,
+            url,
+        );
+        tokio::time::sleep(Duration::from_millis(settle)).await;
 
         let html = page.content().await.map_err(AppError::unavailable)?;
         let final_url = page
