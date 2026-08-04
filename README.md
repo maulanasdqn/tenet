@@ -52,7 +52,10 @@ Swagger UI is at `localhost:8080/docs`. Every route except `/healthz` and the do
 `scripts/sample-scan.sh <target> <engine>` does all of the above in one go and prints a readable
 report. [`examples/shopee.md`](examples/shopee.md) is a real run against a production SPA — 1
 endpoint with `http`, 58 with `browser`. [`examples/anti-bot.md`](examples/anti-bot.md) is an
-evidence-based teardown of Shopee's anti-bot and the capabilities it drove into the tool.
+evidence-based teardown of Shopee's anti-bot and the capabilities it drove into the tool,
+[`examples/automation-detection.md`](examples/automation-detection.md) maps why a real browser passes
+and automation is blocked, and [`examples/risk-scoring.md`](examples/risk-scoring.md) black-box maps
+Shopee's server-side risk engine.
 
 ## API
 
