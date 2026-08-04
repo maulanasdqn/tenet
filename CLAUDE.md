@@ -35,9 +35,9 @@ to both `members` and `workspace.dependencies` in the root `Cargo.toml`.
 Shared crates: `tenet-types` (`TargetKind`, `Engine`, `ScanStatus`, `Finding`, `Endpoint`,
 `AuthScheme`, response envelopes), `tenet-errors` (`AppError` + `IntoResponse`), `tenet-config`
 (env loading, tracing init, shutdown token), `tenet-database` (pool), `tenet-web` (the static
-website engine), `tenet-stealth` (fingerprint normalization + challenge detection),
-`tenet-browser` (the Chromium driver), `tenet-spec` (OpenAPI generation), `tenet-mobile`
-(binary analysis seam).
+website engine), `tenet-stealth` (fingerprint normalization + challenge detection), `tenet-wasm`
+(WebAssembly reverse engineering), `tenet-browser` (the Chromium driver), `tenet-spec` (OpenAPI
+generation), `tenet-mobile` (binary analysis seam).
 
 Services: `tenet-gateway` (HTTP 8080), `tenet-analyzer` (no listener, polls Postgres).
 
@@ -56,6 +56,17 @@ derived from the browser's real user agent, a deterministic settle-delay jitter,
 `detect_challenge` — and never touches chromiumoxide. `tenet-browser` translates a `StealthProfile`
 into CDP calls in `stealth_apply.rs`; the analyzer maps a detected challenge to a finding. Keeping
 it dependency-free is deliberate: the whole crate is unit-testable without a browser.
+
+`tenet-wasm` reverse-engineers a WebAssembly binary with `wasmparser`: `analyze(bytes)` returns a
+`WasmReport` — imports (host calls), exports, function/memory counts, data-segment strings, the
+toolchain from the `producers` custom section, and heuristic `Signal`s (host-call,
+fingerprint-signal, token-surface). It is pure and takes bytes, so it is tested against a real
+fixture, `tests/fixtures/rkm_sec.wasm`, built from `examples/rkm-sec-wasm`. The analyzer fetches a
+`.wasm` a rendered page loaded and turns the report into findings in `application/wasm_analysis.rs`.
+`examples/rkm-sec-wasm` is a standalone `cdylib` (excluded from the workspace, built for
+`wasm32-unknown-unknown`) — a device-token module modeled on Shopee's `antifraudivs`, and the RKM
+site's own hardening starting point. Rebuild the fixture with
+`cargo build --release --target wasm32-unknown-unknown` in that directory and copy the `.wasm` over.
 
 ## Deployment
 

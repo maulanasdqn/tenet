@@ -8,4 +8,5 @@ pub mod observed;
 pub mod observed_findings;
 pub mod run_batch;
 pub mod unavailable_target;
+pub mod wasm_analysis;
 pub mod web_analysis;

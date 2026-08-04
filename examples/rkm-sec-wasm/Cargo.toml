@@ -1,0 +1,14 @@
+[package]
+name = "rkm-sec"
+version = "0.1.0"
+edition = "2021"
+description = "RKM client-side device-token module, compiled to WebAssembly"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+strip = false

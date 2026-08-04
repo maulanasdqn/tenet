@@ -7,6 +7,7 @@ use crate::application::challenge::challenge_findings;
 use crate::application::harvest::harvest_scripts;
 use crate::application::observed::observed_endpoints;
 use crate::application::observed_findings::observed_findings;
+use crate::application::wasm_analysis::analyze_wasm;
 use crate::application::web_analysis::{analyse, AnalysisInput};
 use crate::domain::ports::{PageFetcher, PageRenderer, TargetAnalyzer};
 use crate::domain::work::{Analysis, ArtifactRecord, ScanClaim};
@@ -45,6 +46,7 @@ impl TargetAnalyzer for AnalyzeRenderedTarget {
         );
         let mut findings = observed_findings(&rendered);
         findings.extend(challenge_findings(&rendered.document));
+        findings.extend(analyze_wasm(&self.fetcher, &rendered.wasm_modules).await);
         let analysis = analyse(AnalysisInput {
             page,
             scripts,

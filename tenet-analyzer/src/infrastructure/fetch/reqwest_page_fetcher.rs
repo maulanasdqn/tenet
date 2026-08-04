@@ -72,4 +72,17 @@ impl PageFetcher for ReqwestPageFetcher {
             byte_size: bytes.len() as i64,
         })
     }
+
+    async fn fetch_bytes(&self, url: &str) -> Result<Vec<u8>, AppError> {
+        let response = self.client.get(url).send().await?;
+        let status = response.status().as_u16();
+        if status >= SERVER_ERROR_FLOOR {
+            return Err(AppError::Unavailable(format!(
+                "{url} answered with {status}"
+            )));
+        }
+        let bytes = response.bytes().await?;
+        let kept = &bytes[..bytes.len().min(self.max_body_bytes)];
+        Ok(kept.to_vec())
+    }
 }

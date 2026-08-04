@@ -15,9 +15,6 @@ pub fn observed_findings(rendered: &RenderedDocument) -> Vec<Finding> {
     for key in &rendered.storage_keys {
         push_storage_key(key, &mut findings);
     }
-    for module in &rendered.wasm_modules {
-        push_wasm(module, &mut findings);
-    }
     findings
 }
 
@@ -81,17 +78,6 @@ fn push_gated(request: &ObservedRequest, findings: &mut Vec<Finding>) {
         evidence: Some(format!(
             "the gateway answered {status} without a valid token"
         )),
-    });
-}
-
-fn push_wasm(module: &str, findings: &mut Vec<Finding>) {
-    findings.push(Finding {
-        kind: FindingKind::Technology,
-        name: "WebAssembly module".to_owned(),
-        value: Some("wasm".to_owned()),
-        severity: Severity::Info,
-        confidence: 0.9,
-        evidence: Some(format!("loaded {module}")),
     });
 }
 
@@ -178,14 +164,5 @@ mod tests {
             .map(|finding| &finding.value)
             .collect();
         assert_eq!(keys, vec![&Some("sb-access-token".to_owned())]);
-    }
-
-    #[test]
-    fn a_loaded_wasm_module_is_reported() {
-        let mut document = rendered(Vec::new());
-        document.wasm_modules = vec!["https://x.test/fp/sensor.wasm".to_owned()];
-        assert!(observed_findings(&document)
-            .iter()
-            .any(|finding| finding.name == "WebAssembly module"));
     }
 }

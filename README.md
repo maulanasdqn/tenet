@@ -16,7 +16,9 @@ authorised to assess.
 | Findings (`technology`) | Framework, CDN, WAF, server, analytics and vendor detections with confidence and the evidence that triggered them |
 | Findings (`auth`) | Detected auth schemes, session cookies, token storage, and the endpoints that look like login or token exchange |
 | Endpoints | Method + path, templated (`/api/v1/users/{userId}`), with an origin when the call was absolute, plus the artifact it came from |
-| Observed calls | With `engine: browser`, every XHR and fetch the app actually issues — recorded at confidence 0.95 with the verb the browser really used |
+| Observed calls | With `engine: browser`, every XHR and fetch the app actually issues — recorded at confidence 0.95 with the verb the browser really used, and marked `gated` when the gateway answered 401/403/429 |
+| Anti-bot | Detected protection vendor (DataDome, Akamai, PerimeterX, Kasada, Shopee's `shpsec`/`antifraudivs`), and a challenge finding when a scan was interstitialed |
+| WASM analysis | Any WebAssembly a rendered page loads, reverse-engineered: host imports, exports, embedded strings, toolchain, and whether it looks like a fingerprint/anti-fraud module |
 | OpenAPI | A 3.1 document assembled from the endpoints and auth schemes, with path parameters and per-operation confidence |
 | Artifacts | Every fetched document with its sha256 and size, so a re-scan can be compared against the last one |
 
@@ -49,7 +51,8 @@ Swagger UI is at `localhost:8080/docs`. Every route except `/healthz` and the do
 
 `scripts/sample-scan.sh <target> <engine>` does all of the above in one go and prints a readable
 report. [`examples/shopee.md`](examples/shopee.md) is a real run against a production SPA — 1
-endpoint with `http`, 58 with `browser`.
+endpoint with `http`, 58 with `browser`. [`examples/anti-bot.md`](examples/anti-bot.md) is an
+evidence-based teardown of Shopee's anti-bot and the capabilities it drove into the tool.
 
 ## API
 
@@ -133,6 +136,7 @@ because a path constant is real evidence — that is what the 0.45 confidence is
 | `tenet-database` | Postgres pool |
 | `tenet-web` | Fingerprints, script harvesting, endpoint and auth extraction |
 | `tenet-stealth` | Fingerprint normalization, launch args, challenge detection (pure, no deps) |
+| `tenet-wasm` | WebAssembly reverse engineering: imports, exports, strings, toolchain, signals |
 | `tenet-browser` | Chromium driver: renders a page and captures its live requests |
 | `tenet-spec` | OpenAPI 3.1 generation |
 | `tenet-mobile` | `BinaryAnalyzer` port and the pending implementation |

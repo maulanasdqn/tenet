@@ -23,6 +23,7 @@ pub trait TargetAnalyzer: Send + Sync {
 #[async_trait::async_trait]
 pub trait PageFetcher: Send + Sync {
     async fn fetch(&self, url: &str) -> Result<FetchedDocument, AppError>;
+    async fn fetch_bytes(&self, url: &str) -> Result<Vec<u8>, AppError>;
 }
 
 #[async_trait::async_trait]

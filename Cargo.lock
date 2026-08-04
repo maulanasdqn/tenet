@@ -954,6 +954,7 @@ dependencies = [
  "allocator-api2",
  "equivalent",
  "foldhash",
+ "serde",
 ]
 
 [[package]]
@@ -2169,6 +2170,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "semver"
+version = "1.0.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
+
+[[package]]
 name = "serde"
 version = "1.0.229"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2702,6 +2709,7 @@ dependencies = [
  "tenet-mobile",
  "tenet-stealth",
  "tenet-types",
+ "tenet-wasm",
  "tenet-web",
  "tokio",
  "tracing",
@@ -2806,6 +2814,13 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "utoipa",
+]
+
+[[package]]
+name = "tenet-wasm"
+version = "0.1.0"
+dependencies = [
+ "wasmparser",
 ]
 
 [[package]]
@@ -3328,6 +3343,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc1b4cb0cc549fcf58d7dfc081778139b3d283a081644e833e84682ad71cea24"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "wasmparser"
+version = "0.244.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47b807c72e1bac69382b3a6fb3dbe8ea4c0ed87ff5629b8685ae6b9a611028fe"
+dependencies = [
+ "bitflags",
+ "hashbrown 0.15.5",
+ "indexmap",
+ "semver",
+ "serde",
 ]
 
 [[package]]

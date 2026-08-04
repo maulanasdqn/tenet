@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
+exclude = ["examples/rkm-sec-wasm"]
 members = [
   "tenet-types",
   "tenet-errors",
@@ -7,6 +8,7 @@ members = [
   "tenet-database",
   "tenet-web",
   "tenet-stealth",
+  "tenet-wasm",
   "tenet-browser",
   "tenet-spec",
   "tenet-mobile",
@@ -65,6 +67,7 @@ tenet-config = { path = "tenet-config" }
 tenet-database = { path = "tenet-database" }
 tenet-web = { path = "tenet-web" }
 tenet-stealth = { path = "tenet-stealth" }
+tenet-wasm = { path = "tenet-wasm" }
 tenet-browser = { path = "tenet-browser" }
 tenet-spec = { path = "tenet-spec" }
 tenet-mobile = { path = "tenet-mobile" }
@@ -75,6 +78,7 @@ tower-http = { version = "0.6", features = ["trace"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate", "macros"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "gzip", "brotli", "deflate", "json"] }
 scraper = "0.21"
+wasmparser = "0.244"
 chromiumoxide = "0.9"
 tempfile = "3"
 regex = "1"
