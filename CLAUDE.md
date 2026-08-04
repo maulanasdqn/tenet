@@ -60,9 +60,14 @@ it dependency-free is deliberate: the whole crate is unit-testable without a bro
 `tenet-wasm` reverse-engineers a WebAssembly binary with `wasmparser`: `analyze(bytes)` returns a
 `WasmReport` — imports (host calls), exports, function/memory counts, data-segment strings, the
 toolchain from the `producers` custom section, and heuristic `Signal`s (host-call,
-fingerprint-signal, token-surface). It is pure and takes bytes, so it is tested against a real
-fixture, `tests/fixtures/rkm_sec.wasm`, built from `examples/rkm-sec-wasm`. The analyzer fetches a
-`.wasm` a rendered page loaded and turns the report into findings in `application/wasm_analysis.rs`.
+fingerprint-signal, token-surface). `embed::extract_base64_wasm` also pulls a WASM module hidden as
+a base64 string inside a JS bundle (the `AGFzbQ` magic — how Kasada and DataDome ship their
+sensors), and `embed::wasm_api_calls` spots `WebAssembly.instantiate`/`compile` usage. It is pure
+and takes bytes, so it is tested against a real fixture, `tests/fixtures/rkm_sec.wasm`, built from
+`examples/rkm-sec-wasm`. The analyzer turns reports into findings in two places:
+`application/wasm_analysis.rs` fetches a `.wasm` a rendered page loaded, and
+`application/embedded_wasm.rs` scans every harvested script body — so base64-embedded WASM is
+recovered by the static `http` engine too, no browser required.
 `examples/rkm-sec-wasm` is a standalone `cdylib` (excluded from the workspace, built for
 `wasm32-unknown-unknown`) — a device-token module modeled on Shopee's `antifraudivs`, and the RKM
 site's own hardening starting point. Rebuild the fixture with

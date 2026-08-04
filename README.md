@@ -18,7 +18,7 @@ authorised to assess.
 | Endpoints | Method + path, templated (`/api/v1/users/{userId}`), with an origin when the call was absolute, plus the artifact it came from |
 | Observed calls | With `engine: browser`, every XHR and fetch the app actually issues — recorded at confidence 0.95 with the verb the browser really used, and marked `gated` when the gateway answered 401/403/429 |
 | Anti-bot | Detected protection vendor (DataDome, Akamai, PerimeterX, Kasada, Shopee's `shpsec`/`antifraudivs`), and a challenge finding when a scan was interstitialed |
-| WASM analysis | Any WebAssembly a rendered page loads, reverse-engineered: host imports, exports, embedded strings, toolchain, and whether it looks like a fingerprint/anti-fraud module |
+| WASM analysis | Any WebAssembly a page loads — a separate `.wasm` file, or one hidden as base64 inside a JS bundle — reverse-engineered: host imports, exports, embedded strings, toolchain, and whether it looks like a fingerprint/anti-fraud module |
 | OpenAPI | A 3.1 document assembled from the endpoints and auth schemes, with path parameters and per-operation confidence |
 | Artifacts | Every fetched document with its sha256 and size, so a re-scan can be compared against the last one |
 
@@ -181,6 +181,9 @@ cargo test --workspace
 - **Getting past a challenge.** Stealth normalizes the fingerprint but does not solve an
   interstitial. Waiting out a JS challenge, or wiring a solver, would turn a detected
   `bot-protection` finding into a completed scan.
+- **Deobfuscating WASM sensors.** `tenet-wasm` recovers a module's imports, exports, strings and
+  toolchain and flags anti-fraud behaviour, but stops short of lifting the token algorithm out of
+  the bytecode. Disassembly to WAT and dataflow over the fingerprint routine is the next depth.
 - **Telling an API from a CDN payload.** Every observed `fetch` is recorded, so content assets
   pulled at runtime sit alongside real API calls — on the Shopee sample that is 24 rows of noise
   against 21 useful ones. Classifying by response content type or origin role would fix it.

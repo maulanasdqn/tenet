@@ -79,6 +79,7 @@ sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-r
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "gzip", "brotli", "deflate", "json"] }
 scraper = "0.21"
 wasmparser = "0.244"
+base64 = "0.22"
 chromiumoxide = "0.9"
 tempfile = "3"
 regex = "1"

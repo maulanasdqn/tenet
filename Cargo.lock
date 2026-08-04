@@ -2697,6 +2697,7 @@ name = "tenet-analyzer"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64",
  "futures-util",
  "hex",
  "reqwest 0.12.28",
@@ -2820,6 +2821,7 @@ dependencies = [
 name = "tenet-wasm"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "wasmparser",
 ]
 

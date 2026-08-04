@@ -3,6 +3,7 @@ pub mod analyze_rendered_target;
 pub mod analyze_scan;
 pub mod analyze_web_target;
 pub mod challenge;
+pub mod embedded_wasm;
 pub mod harvest;
 pub mod observed;
 pub mod observed_findings;

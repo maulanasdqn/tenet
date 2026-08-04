@@ -24,6 +24,9 @@ pub fn analyse(input: AnalysisInput) -> Analysis {
         &input.scripts,
         &endpoints,
     ));
+    findings.extend(crate::application::embedded_wasm::embedded_findings(
+        &input.scripts,
+    ));
     findings.extend(input.observed_findings);
 
     Analysis {

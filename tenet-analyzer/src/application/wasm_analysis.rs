@@ -32,7 +32,7 @@ fn unfetched(module: &str) -> Finding {
     }
 }
 
-fn findings_for(module: &str, bytes: &[u8]) -> Vec<Finding> {
+pub(crate) fn findings_for(module: &str, bytes: &[u8]) -> Vec<Finding> {
     let Ok(report) = tenet_wasm::analyze(bytes) else {
         return Vec::new();
     };

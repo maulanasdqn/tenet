@@ -74,6 +74,12 @@ minified React); the tracking SDK is analytics (UBT); the verify page's big "sen
 manifest and its polyfills are real polyfills. No client-side canvas/WebGL/audio fingerprinting
 blob, no WASM, not even string-array obfuscation.
 
+The `AGFzbQ` search matters even though it came up empty: some vendors (Kasada, DataDome) hide their
+WASM sensor as a base64 string inside a JS bundle rather than a separate `.wasm` file. `tenet-wasm`
+now extracts and reverse-engineers that too — proven end to end against a bundle that embeds
+`examples/rkm-sec-wasm`, recovered by the static `http` engine with no browser. Shopee simply does
+not use the technique.
+
 So where is the security? **Server-side, at the `SGW` gateway.** The risk scoring and the tiered
 403/`action_type:2` gating happen where a client cannot see or reverse them. The client only
 collects light signals (`SPC_F`, device id) that the gateway evaluates.
