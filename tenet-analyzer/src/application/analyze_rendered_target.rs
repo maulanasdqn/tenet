@@ -4,25 +4,28 @@ use tenet_errors::AppError;
 use tenet_web::PageSnapshot;
 
 use crate::application::harvest::harvest_scripts;
+use crate::application::observed::{observed_endpoints, observed_findings};
 use crate::application::web_analysis::{analyse, AnalysisInput};
-use crate::domain::ports::{PageFetcher, TargetAnalyzer};
+use crate::domain::ports::{PageFetcher, PageRenderer, TargetAnalyzer};
 use crate::domain::work::{Analysis, ArtifactRecord, ScanClaim};
 
-pub struct AnalyzeWebTarget {
+pub struct AnalyzeRenderedTarget {
+    renderer: Arc<dyn PageRenderer>,
     fetcher: Arc<dyn PageFetcher>,
 }
 
-impl AnalyzeWebTarget {
-    pub fn new(fetcher: Arc<dyn PageFetcher>) -> Self {
-        Self { fetcher }
+impl AnalyzeRenderedTarget {
+    pub fn new(renderer: Arc<dyn PageRenderer>, fetcher: Arc<dyn PageFetcher>) -> Self {
+        Self { renderer, fetcher }
     }
 }
 
 #[async_trait::async_trait]
-impl TargetAnalyzer for AnalyzeWebTarget {
+impl TargetAnalyzer for AnalyzeRenderedTarget {
     async fn analyze(&self, claim: &ScanClaim) -> Result<Analysis, AppError> {
-        let document = self.fetcher.fetch(&claim.target).await?;
-        let mut artifacts = vec![ArtifactRecord::from_document(&document, "html")];
+        let rendered = self.renderer.render(&claim.target).await?;
+        let document = &rendered.document;
+        let mut artifacts = vec![ArtifactRecord::from_document(document, "rendered")];
         let scripts = harvest_scripts(
             &self.fetcher,
             &document.body,
@@ -42,16 +45,17 @@ impl TargetAnalyzer for AnalyzeWebTarget {
             page,
             scripts,
             artifacts,
-            observed_endpoints: Vec::new(),
-            observed_findings: Vec::new(),
+            observed_endpoints: observed_endpoints(&rendered.observed),
+            observed_findings: observed_findings(&rendered),
         });
 
         tracing::info!(
             scan_id = %claim.id,
-            artifacts = analysis.artifacts.len(),
+            observed = rendered.observed.len(),
+            storage_keys = rendered.storage_keys.len(),
             endpoints = analysis.endpoints.len(),
             findings = analysis.findings.len(),
-            "web target analyzed"
+            "rendered target analyzed"
         );
         Ok(analysis)
     }

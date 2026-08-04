@@ -3,7 +3,8 @@
 A reverse engineering framework for understanding what an application is actually built on and
 what it actually talks to. Point it at a website and it returns the technology stack, the private
 API it calls, how that API is authenticated, and an OpenAPI document you can hand to a client
-generator. Mobile binaries are next.
+generator. It can read the served HTML, or drive a real browser and watch the calls the app makes
+after it hydrates. Mobile binaries are next.
 
 Tenet only reads what a target already serves to any browser. Use it on systems you own or are
 authorised to assess.
@@ -15,6 +16,7 @@ authorised to assess.
 | Findings (`technology`) | Framework, CDN, WAF, server, analytics and vendor detections with confidence and the evidence that triggered them |
 | Findings (`auth`) | Detected auth schemes, session cookies, token storage, and the endpoints that look like login or token exchange |
 | Endpoints | Method + path, templated (`/api/v1/users/{userId}`), with an origin when the call was absolute, plus the artifact it came from |
+| Observed calls | With `engine: browser`, every XHR and fetch the app actually issues — recorded at confidence 0.95 with the verb the browser really used |
 | OpenAPI | A 3.1 document assembled from the endpoints and auth schemes, with path parameters and per-operation confidence |
 | Artifacts | Every fetched document with its sha256 and size, so a re-scan can be compared against the last one |
 
@@ -33,7 +35,7 @@ Submit a scan and read it back:
 ```bash
 curl -X POST localhost:8080/v1/scans \
   -H 'x-api-key: dev-key' -H 'content-type: application/json' \
-  -d '{"target":"https://example.com","kind":"web"}'
+  -d '{"target":"https://example.com","kind":"web","engine":"browser"}'
 
 SCAN=<scan_id from the response>
 curl localhost:8080/v1/scans/$SCAN           -H 'x-api-key: dev-key'
@@ -50,7 +52,7 @@ Swagger UI is at `localhost:8080/docs`. Every route except `/healthz` and the do
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/healthz` | liveness, unauthenticated |
-| `POST` | `/v1/scans` | queue a scan — `target`, `kind` (`web` \| `mobile`), optional `max_scripts` |
+| `POST` | `/v1/scans` | queue a scan — `target`, `kind` (`web` \| `mobile`), `engine` (`http` \| `browser`), optional `max_scripts` |
 | `GET` | `/v1/scans/{id}` | status, attempts, timings, error |
 | `GET` | `/v1/scans/{id}/findings` | technology and auth findings |
 | `GET` | `/v1/scans/{id}/endpoints` | discovered endpoints |
@@ -61,21 +63,46 @@ Swagger UI is at `localhost:8080/docs`. Every route except `/healthz` and the do
 ```
 tenet-gateway ──insert queued scan──> postgres <──claim (SKIP LOCKED)── tenet-analyzer
      ^                                    ^                                   │
-     └────── read findings/spec ──────────┘                                   │
-                                                                              v
-                                            fetch page ──> harvest scripts ──> tenet-web
+     └────── read findings/spec ──────────┘                    engine=http ───┤
                                                                               │
-                                          detect / endpoints / auth_findings <┘
+                                            fetch page ──> harvest scripts ───┤
+                                                                              │
+                                                            engine=browser ───┤
+                                                                              │
+                          render + capture XHR/fetch ──> harvest scripts ─────┤
+                                                                              v
+                                          detect / endpoints / auth_findings  tenet-web
 ```
 
 `tenet-web` is a pure library: give it fetched bytes and it hands back findings and endpoints. It
-never opens a socket, which is why its 37 tests run without a network. The analyzer's
-infrastructure owns fetching, hashing and persistence.
+never opens a socket, which is why its tests run without a network. Both engines feed the same
+analysis core, so the browser path adds observations rather than replacing anything.
 
-Endpoint extraction reads three signals and keeps the strongest per `method path`: method calls
-(`axios.post("/api/v1/sessions")` → confidence 0.85), fetch calls (0.7), and bare path literals
-matching `/api`, `/rest`, `/graphql`, `/gateway` or `/v1` (0.45). Template segments are normalised
-— `:userId` and `${userId}` both become `{userId}` — and static assets are discarded.
+### The two engines
+
+`engine: http` fetches the served HTML and its linked scripts. Fast, no browser, and enough for
+server-rendered sites.
+
+`engine: browser` drives real Chromium, waits for the app to hydrate, and records every XHR and
+fetch it issues. That catches what static reading cannot: URLs assembled at runtime, verbs chosen
+from variables, and calls made only after login or interaction. Observed calls land at confidence
+`0.95` with source `runtime`; an `Authorization` header seen on a live request pins the auth scheme
+at `0.95`, and `localStorage` keys are reported by their real names.
+
+Chromium is found automatically, or set `CHROME_BIN`. To use a browser you already run, set
+`CHROME_WS_URL` to its DevTools endpoint and Tenet connects instead of launching. If neither is
+available the analyzer still starts and serves `http` scans; `browser` scans fail with a clear
+message. `BROWSER_ENABLED=0` turns the engine off outright.
+
+Endpoint extraction reads four signals and keeps the strongest per `method path`: observed runtime
+calls (0.95, browser engine only), method calls (`axios.post("/api/v1/sessions")` → 0.85), fetch
+calls (0.7), and bare path literals matching `/api`, `/rest`, `/graphql`, `/gateway` or `/v1`
+(0.45). Template segments are normalised — `:userId` and `${userId}` both become `{userId}` — and
+static assets are discarded.
+
+A call argument only counts when the string literal is the whole argument, so `fetch("/ap" + rest)`
+does not invent an `/ap` endpoint. A bare literal is still recorded even when it is concatenated,
+because a path constant is real evidence — that is what the 0.45 confidence is for.
 
 ### Crates
 
@@ -86,6 +113,7 @@ matching `/api`, `/rest`, `/graphql`, `/gateway` or `/v1` (0.45). Template segme
 | `tenet-config` | `Config::from_env()`, tracing init, shutdown token |
 | `tenet-database` | Postgres pool |
 | `tenet-web` | Fingerprints, script harvesting, endpoint and auth extraction |
+| `tenet-browser` | Chromium driver: renders a page and captures its live requests |
 | `tenet-spec` | OpenAPI 3.1 generation |
 | `tenet-mobile` | `BinaryAnalyzer` port and the pending implementation |
 | `tenet-gateway` | HTTP API |
@@ -121,7 +149,8 @@ cargo test --workspace
   scans to it; APK and IPA unpacking, string and manifest extraction are the missing implementation.
 - **Secret detection.** `FindingKind::Secret` exists and is unused — API keys and tokens left in
   bundles are the obvious next finding type.
-- **Rendered scanning.** Only served HTML and linked scripts are read today, so endpoints reachable
-  solely through a rendered SPA are missed. A headless engine would close that gap.
 - **Request shapes.** Endpoints carry a method and a path; bodies, query parameters and response
-  schemas would make the generated spec directly usable.
+  schemas would make the generated spec directly usable. The browser engine already sees real
+  request bodies, so this is mostly a matter of recording them.
+- **Authenticated scanning.** The browser engine renders as an anonymous visitor. Driving a login
+  first would expose the endpoints that only exist behind a session.

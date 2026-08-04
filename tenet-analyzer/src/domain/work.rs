@@ -5,6 +5,7 @@ pub struct ScanClaim {
     pub id: String,
     pub target: String,
     pub kind: String,
+    pub engine: String,
     pub max_scripts: i16,
     pub attempts: i16,
     pub max_attempts: i16,
@@ -18,6 +19,21 @@ pub struct FetchedDocument {
     pub body: String,
     pub sha256: String,
     pub byte_size: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct ObservedRequest {
+    pub method: String,
+    pub url: String,
+    pub auth_scheme: Option<String>,
+    pub api_key_header: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RenderedDocument {
+    pub document: FetchedDocument,
+    pub observed: Vec<ObservedRequest>,
+    pub storage_keys: Vec<String>,
 }
 
 #[derive(Debug, Clone)]

@@ -1,6 +1,6 @@
 use tenet_errors::AppError;
 
-use crate::domain::work::{Analysis, FetchedDocument, ScanClaim};
+use crate::domain::work::{Analysis, FetchedDocument, RenderedDocument, ScanClaim};
 
 #[async_trait::async_trait]
 pub trait ScanQueue: Send + Sync {
@@ -23,4 +23,9 @@ pub trait TargetAnalyzer: Send + Sync {
 #[async_trait::async_trait]
 pub trait PageFetcher: Send + Sync {
     async fn fetch(&self, url: &str) -> Result<FetchedDocument, AppError>;
+}
+
+#[async_trait::async_trait]
+pub trait PageRenderer: Send + Sync {
+    async fn render(&self, url: &str) -> Result<RenderedDocument, AppError>;
 }

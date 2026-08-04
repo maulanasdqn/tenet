@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use tenet_errors::AppError;
-use tenet_types::TargetKind;
+use tenet_types::{Engine, TargetKind};
 use ulid::Ulid;
 
 use crate::domain::ports::ScanRepository;
@@ -13,6 +13,7 @@ const MAX_SCRIPTS_CEILING: i16 = 100;
 pub struct SubmitScanInput {
     pub target: String,
     pub kind: TargetKind,
+    pub engine: Engine,
     pub max_scripts: Option<i16>,
 }
 
@@ -41,6 +42,7 @@ impl SubmitScan {
             id: Ulid::new().to_string(),
             target,
             kind: input.kind,
+            engine: engine_for(input.kind, input.engine),
             max_scripts: clamp_scripts(input.max_scripts.unwrap_or(self.default_max_scripts)),
             max_attempts: self.max_attempts,
             created_at: Utc::now(),
@@ -87,18 +89,38 @@ fn clamp_scripts(requested: i16) -> i16 {
     requested.clamp(1, MAX_SCRIPTS_CEILING)
 }
 
+fn engine_for(kind: TargetKind, requested: Engine) -> Engine {
+    match kind {
+        TargetKind::Mobile => Engine::Http,
+        TargetKind::Web => requested,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use tenet_types::TargetKind;
+    use tenet_types::{Engine, TargetKind};
 
-    use super::{clamp_scripts, validated_target, SubmitScanInput};
+    use super::{clamp_scripts, engine_for, validated_target, SubmitScanInput};
 
     fn input(target: &str, kind: TargetKind) -> SubmitScanInput {
         SubmitScanInput {
             target: target.to_owned(),
             kind,
+            engine: Engine::Http,
             max_scripts: None,
         }
+    }
+
+    #[test]
+    fn a_mobile_target_never_uses_the_browser_engine() {
+        assert_eq!(
+            engine_for(TargetKind::Mobile, Engine::Browser),
+            Engine::Http
+        );
+        assert_eq!(
+            engine_for(TargetKind::Web, Engine::Browser),
+            Engine::Browser
+        );
     }
 
     #[test]

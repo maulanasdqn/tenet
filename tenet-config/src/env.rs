@@ -11,3 +11,7 @@ pub fn env_parse<T: std::str::FromStr>(key: &str, default: &str) -> Result<T, St
         .parse()
         .map_err(|_| format!("{key} must be a number"))
 }
+
+pub fn env_flag_default(key: &str, default: &str) -> bool {
+    matches!(env_or(key, default).as_str(), "1" | "true" | "yes")
+}

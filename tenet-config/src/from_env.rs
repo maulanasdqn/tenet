@@ -1,4 +1,4 @@
-use crate::env::{env_or, env_parse};
+use crate::env::{env_flag_default, env_or, env_parse};
 use crate::Config;
 
 impl Config {
@@ -21,6 +21,17 @@ impl Config {
             fetch_connect_timeout_seconds: env_parse("FETCH_CONNECT_TIMEOUT_SECONDS", "5")?,
             fetch_max_redirects: env_parse("FETCH_MAX_REDIRECTS", "5")?,
             fetch_user_agent: env_or("FETCH_USER_AGENT", "tenet/0.1"),
+            browser_enabled: env_flag_default("BROWSER_ENABLED", "1"),
+            browser_pool_size: env_parse("BROWSER_POOL_SIZE", "2")?,
+            chrome_bin: env_or("CHROME_BIN", ""),
+            chrome_ws_url: env_or("CHROME_WS_URL", ""),
+            browser_headful: env_flag_default("BROWSER_HEADFUL", "0"),
+            browser_no_sandbox: env_flag_default("BROWSER_NO_SANDBOX", "1"),
+            browser_viewport_width: env_parse("BROWSER_VIEWPORT_WIDTH", "1280")?,
+            browser_viewport_height: env_parse("BROWSER_VIEWPORT_HEIGHT", "800")?,
+            browser_nav_timeout_seconds: env_parse("BROWSER_NAV_TIMEOUT_SECONDS", "30")?,
+            browser_settle_ms: env_parse("BROWSER_SETTLE_MS", "2500")?,
+            browser_quiet_ms: env_parse("BROWSER_QUIET_MS", "500")?,
         })
     }
 }

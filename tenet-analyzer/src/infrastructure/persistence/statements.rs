@@ -2,7 +2,7 @@ pub const CLAIM_SCANS: &str = "UPDATE scans SET status = 'running', started_at =
      attempts = attempts + 1 WHERE id IN ( \
        SELECT id FROM scans WHERE status = 'queued' ORDER BY created_at \
        FOR UPDATE SKIP LOCKED LIMIT $1 \
-     ) RETURNING id, target, kind, max_scripts, attempts, max_attempts";
+     ) RETURNING id, target, kind, engine, max_scripts, attempts, max_attempts";
 
 pub const COMPLETE_SCAN: &str = "UPDATE scans SET status = 'succeeded', finished_at = now(), \
      error = NULL WHERE id = $1";

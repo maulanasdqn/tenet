@@ -3,12 +3,14 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 pub static METHOD_CALL: LazyLock<Option<Regex>> = LazyLock::new(|| {
-    Regex::new(r#"(?i)\.(get|post|put|patch|delete|head|options)\s*\(\s*["'`]([^"'`]{1,512})["'`]"#)
-        .ok()
+    Regex::new(
+        r#"(?i)\.(get|post|put|patch|delete|head|options)\s*\(\s*["'`]([^"'`]{1,512})["'`]\s*[,)]"#,
+    )
+    .ok()
 });
 
 pub static FETCH_CALL: LazyLock<Option<Regex>> =
-    LazyLock::new(|| Regex::new(r#"(?i)\bfetch\s*\(\s*["'`]([^"'`]{1,512})["'`]"#).ok());
+    LazyLock::new(|| Regex::new(r#"(?i)\bfetch\s*\(\s*["'`]([^"'`]{1,512})["'`]\s*[,)]"#).ok());
 
 pub static PATH_LITERAL: LazyLock<Option<Regex>> = LazyLock::new(|| {
     Regex::new(r#"["'`](/(?:api|rest|graphql|gateway|v[0-9]{1,2})(?:/[^"'`\s]{0,256})?)["'`]"#).ok()

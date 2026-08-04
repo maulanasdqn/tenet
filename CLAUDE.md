@@ -1,7 +1,8 @@
 # Tenet
 
 Rust workspace for reverse engineering a target's surface. Websites today, mobile binaries next.
-A gateway accepts scans over HTTP, an analyzer claims them from Postgres and runs the pipeline.
+A gateway accepts scans over HTTP, an analyzer claims them from Postgres and runs the pipeline,
+either by fetching the served HTML or by driving Chromium and watching what the app calls.
 
 ## Commands
 
@@ -21,22 +22,32 @@ silently unlinted. Thresholds are in `clippy.toml`, formatting in `rustfmt.toml`
 Migrations in `migrations/` run automatically on `tenet-gateway` startup via `sqlx::migrate!`.
 The analyzer never migrates; it expects the gateway to have run first.
 
+The analyzer wants Chromium for `engine=browser` scans. It finds a local binary, honours
+`CHROME_BIN`, or connects to an existing DevTools endpoint via `CHROME_WS_URL` — the last one is
+the easiest way to develop against a browser in a container.
+
 ## Layout
 
 Every workspace member lives at the repo root and is named with the `tenet-` prefix. Crate names
 use the same prefix (`tenet_types` when imported). New members must follow the prefix and be added
 to both `members` and `workspace.dependencies` in the root `Cargo.toml`.
 
-Shared crates: `tenet-types` (`TargetKind`, `ScanStatus`, `Finding`, `Endpoint`, `AuthScheme`,
-response envelopes), `tenet-errors` (`AppError` + `IntoResponse`), `tenet-config` (env loading,
-tracing init, shutdown token), `tenet-database` (pool), `tenet-web` (the website engine),
-`tenet-spec` (OpenAPI generation), `tenet-mobile` (binary analysis seam).
+Shared crates: `tenet-types` (`TargetKind`, `Engine`, `ScanStatus`, `Finding`, `Endpoint`,
+`AuthScheme`, response envelopes), `tenet-errors` (`AppError` + `IntoResponse`), `tenet-config`
+(env loading, tracing init, shutdown token), `tenet-database` (pool), `tenet-web` (the static
+website engine), `tenet-browser` (the Chromium driver), `tenet-spec` (OpenAPI generation),
+`tenet-mobile` (binary analysis seam).
 
 Services: `tenet-gateway` (HTTP 8080), `tenet-analyzer` (no listener, polls Postgres).
 
 `tenet-web` is pure: it takes fetched bytes and returns findings and endpoints. It never opens a
 socket. Fetching belongs to the analyzer's infrastructure, which keeps the engine testable without
 a network and keeps signatures cheap to add.
+
+`tenet-browser` is the opposite — it exists to talk to Chromium and does nothing else. It renders a
+url and reports what it saw (`RenderedPage`: html, the main response, captured requests, storage
+keys). It does no analysis, so everything it returns flows through the same `tenet-web` core.
+Only the analyzer's `infrastructure/browser/` may depend on it.
 
 ## Deployment
 
@@ -51,13 +62,14 @@ Each service is `domain/` → `application/` → `infrastructure/`, with `main.r
 composition root.
 
 - `domain/` — entities and port traits. Depends on shared crates only. No sqlx queries, no axum,
-  no reqwest, no scraper. Ports are `#[async_trait] pub trait X: Send + Sync` returning
-  `Result<T, AppError>`.
+  no reqwest, no scraper, no chromiumoxide, no `tenet_browser`. Ports are
+  `#[async_trait] pub trait X: Send + Sync` returning `Result<T, AppError>`.
 - `application/` — one use case per file, named after it (`submit_scan.rs` → `SubmitScan`). Struct
   holds `Arc<dyn Port>` fields, exposes `new(...)` and a single `execute(...)`. Business rules live
   here (target validation, script budget clamping, the retry decision, spec assembly).
 - `infrastructure/` — adapters implementing the ports: `http/` (routes, handlers, dto, views, auth),
-  `persistence/` (postgres repositories, SQL in `statements.rs`), `fetch/` (the reqwest client).
+  `persistence/` (postgres repositories, SQL in `statements.rs`), `fetch/` (the reqwest client),
+  `browser/` (the `tenet-browser` adapter).
 - `state.rs` — `AppState` for axum services: `Arc<UseCase>` fields plus config values.
 
 Dependencies point inward. Infrastructure knows about domain and application; never the reverse.
@@ -66,7 +78,13 @@ Wiring — concrete adapters constructed and injected as `Arc<dyn Port>` — hap
 An analyzer that implements a port from its own application layer is fine (`AnalyzeWebTarget` is a
 `TargetAnalyzer`) because it depends only on other ports. An adapter that needs a crate the
 application layer may not touch belongs in `infrastructure` — that is why hashing lives in
-`ReqwestPageFetcher` and not in the use case.
+`ReqwestPageFetcher` and `ChromiumPageRenderer` rather than in a use case, and why both return a
+`FetchedDocument` that already carries its `sha256` and `byte_size`.
+
+Both web engines share one analysis core. `web_analysis::analyse` takes a page, its scripts, and
+any runtime observations, and returns the `Analysis`; `AnalyzeWebTarget` passes no observations
+and `AnalyzeRenderedTarget` passes what the browser saw. A new engine should add observations to
+that call, never fork the analysis.
 
 ## Conventions
 
@@ -95,6 +113,12 @@ application layer may not touch belongs in `infrastructure` — that is why hash
   `std::sync::Mutex`, `std::sync::RwLock`, and `std::thread::sleep` are denied by clippy — use the
   `tokio` equivalents. `scraper::Html` is not `Send`; keep it inside a sync function so it never
   crosses an `.await`.
+- Chromium: `Browser::launch` and `Browser::connect` both hand back a `Handler` that must be
+  pumped on its own task or every command hangs. `Session` owns that task and flips an `alive`
+  flag when the stream ends, which is how `ChromiumRenderer` notices a dead browser and relaunches.
+  Event listeners are aborted on `Drop` — a `NetworkCapture` that outlives its page leaks a task.
+- Loop bodies inside a spawned task hit the nesting limit fast. Extract the body into a named
+  function (`pump_handler`, `store_main_response`) rather than reaching for an `allow`.
 - Tests: pure functions carry `#[cfg(test)] mod tests` in the same file. Name a test after the
   behaviour it pins (`a_static_asset_is_not_an_endpoint`), not after the function it calls.
 - Imports: `std` first, then external crates, then `crate::`, each group separated by a blank line
@@ -104,12 +128,24 @@ application layer may not touch belongs in `infrastructure` — that is why hash
 ## Scan flow
 
 `gateway` validates the target and inserts a `scans` row as `queued` → `analyzer` claims a batch
-with `FOR UPDATE SKIP LOCKED`, marking rows `running` and incrementing `attempts` → the web
-analyzer fetches the page, harvests up to `max_scripts` script assets plus every inline script,
+with `FOR UPDATE SKIP LOCKED`, marking rows `running` and incrementing `attempts` → `AnalyzeScan`
+picks an analyzer by `kind` then `engine` → the chosen analyzer produces the page and its scripts,
 then runs `tenet-web`: `detect` (fingerprints), `endpoints` (method calls, fetch calls, path
 literals), `auth_findings` (challenge headers, session cookies, source markers, auth-shaped paths)
 → artifacts, findings and endpoints are written in one transaction and the scan is marked
 `succeeded`.
+
+`engine=http` fetches the served HTML and harvests up to `max_scripts` linked scripts plus every
+inline script. `engine=browser` renders the page in Chromium, harvests scripts from the hydrated
+DOM the same way, and adds what it observed: XHR and fetch calls become endpoints at `0.95` with
+source `runtime`, an `Authorization` header seen on the wire pins the scheme at `0.95`, and
+`localStorage` keys that look like tokens are reported under their real names. Observations are
+merged with static findings by the usual identity-and-confidence rule, so the browser engine only
+ever adds or outranks.
+
+The browser engine is optional. If `BROWSER_ENABLED=0`, or Chromium cannot be reached, the
+analyzer still serves `http` scans and wires an `UnavailableTarget` in place of the renderer, so
+`engine=browser` scans fail with a clear reason instead of silently downgrading to a weaker scan.
 
 A transient failure with attempts left goes back to `queued`; anything else is `failed` with the
 error recorded on the row. Only `AppError::Unavailable` is transient.

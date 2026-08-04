@@ -1,0 +1,17 @@
+[package]
+name = "tenet-browser"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tenet-errors.workspace = true
+chromiumoxide.workspace = true
+futures-util.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+serde_json.workspace = true
+url.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

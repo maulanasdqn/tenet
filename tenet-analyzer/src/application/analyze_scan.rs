@@ -1,30 +1,33 @@
 use std::sync::Arc;
 
 use tenet_errors::AppError;
-use tenet_types::TargetKind;
+use tenet_types::{Engine, TargetKind};
 
 use crate::domain::ports::{AnalysisWriter, ScanQueue, TargetAnalyzer};
 use crate::domain::work::ScanClaim;
 
+pub struct Analyzers {
+    pub web: Arc<dyn TargetAnalyzer>,
+    pub rendered: Arc<dyn TargetAnalyzer>,
+    pub mobile: Arc<dyn TargetAnalyzer>,
+}
+
 pub struct AnalyzeScan {
     queue: Arc<dyn ScanQueue>,
     writer: Arc<dyn AnalysisWriter>,
-    web: Arc<dyn TargetAnalyzer>,
-    mobile: Arc<dyn TargetAnalyzer>,
+    analyzers: Analyzers,
 }
 
 impl AnalyzeScan {
     pub fn new(
         queue: Arc<dyn ScanQueue>,
         writer: Arc<dyn AnalysisWriter>,
-        web: Arc<dyn TargetAnalyzer>,
-        mobile: Arc<dyn TargetAnalyzer>,
+        analyzers: Analyzers,
     ) -> Self {
         Self {
             queue,
             writer,
-            web,
-            mobile,
+            analyzers,
         }
     }
 
@@ -40,8 +43,11 @@ impl AnalyzeScan {
 
     fn analyzer_for(&self, claim: &ScanClaim) -> &Arc<dyn TargetAnalyzer> {
         match TargetKind::from_name(&claim.kind) {
-            TargetKind::Mobile => &self.mobile,
-            TargetKind::Web => &self.web,
+            TargetKind::Mobile => &self.analyzers.mobile,
+            TargetKind::Web => match Engine::from_name(&claim.engine) {
+                Engine::Browser => &self.analyzers.rendered,
+                Engine::Http => &self.analyzers.web,
+            },
         }
     }
 
@@ -72,6 +78,7 @@ mod tests {
             id: "scan".to_owned(),
             target: "https://example.com".to_owned(),
             kind: "web".to_owned(),
+            engine: "http".to_owned(),
             max_scripts: 10,
             attempts,
             max_attempts,

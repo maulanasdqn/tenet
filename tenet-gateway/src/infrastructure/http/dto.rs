@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use garde::Validate;
 use serde::{Deserialize, Serialize};
-use tenet_types::TargetKind;
+use tenet_types::{Engine, TargetKind};
 use utoipa::ToSchema;
 
 use crate::application::submit_scan::SubmitScanInput;
@@ -17,6 +17,9 @@ pub struct CreateScanRequest {
     #[serde(default = "default_kind")]
     #[garde(skip)]
     pub kind: TargetKind,
+    #[serde(default = "default_engine")]
+    #[garde(skip)]
+    pub engine: Engine,
     #[garde(inner(range(min = 1, max = MAX_SCRIPTS)))]
     pub max_scripts: Option<i16>,
 }
@@ -25,11 +28,16 @@ fn default_kind() -> TargetKind {
     TargetKind::Web
 }
 
+fn default_engine() -> Engine {
+    Engine::Http
+}
+
 impl From<CreateScanRequest> for SubmitScanInput {
     fn from(request: CreateScanRequest) -> Self {
         Self {
             target: request.target,
             kind: request.kind,
+            engine: request.engine,
             max_scripts: request.max_scripts,
         }
     }
@@ -40,6 +48,7 @@ pub struct ScanCreatedResponse {
     pub scan_id: String,
     pub target: String,
     pub kind: String,
+    pub engine: String,
     pub status: String,
     pub created_at: DateTime<Utc>,
 }
@@ -50,6 +59,7 @@ impl From<NewScan> for ScanCreatedResponse {
             scan_id: scan.id,
             target: scan.target,
             kind: scan.kind.as_str().to_owned(),
+            engine: scan.engine.as_str().to_owned(),
             status: "queued".to_owned(),
             created_at: scan.created_at,
         }
@@ -59,7 +69,7 @@ impl From<NewScan> for ScanCreatedResponse {
 #[cfg(test)]
 mod tests {
     use garde::Validate;
-    use tenet_types::TargetKind;
+    use tenet_types::{Engine, TargetKind};
 
     use super::CreateScanRequest;
 
@@ -67,6 +77,7 @@ mod tests {
         CreateScanRequest {
             target: target.to_owned(),
             kind: TargetKind::Web,
+            engine: Engine::Http,
             max_scripts,
         }
     }
@@ -94,9 +105,17 @@ mod tests {
     }
 
     #[test]
-    fn the_kind_defaults_to_web() {
+    fn the_kind_and_engine_default_to_web_over_http() {
         let parsed: CreateScanRequest = serde_json::from_str(r#"{"target":"https://example.com"}"#)
             .unwrap_or(request("x", None));
         assert_eq!(parsed.kind, TargetKind::Web);
+        assert_eq!(parsed.engine, Engine::Http);
+    }
+
+    #[test]
+    fn the_browser_engine_can_be_asked_for_by_name() {
+        let body = r#"{"target":"https://example.com","engine":"browser"}"#;
+        let parsed: CreateScanRequest = serde_json::from_str(body).unwrap_or(request("x", None));
+        assert_eq!(parsed.engine, Engine::Browser);
     }
 }

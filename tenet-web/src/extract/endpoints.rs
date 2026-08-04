@@ -139,6 +139,22 @@ mod tests {
     }
 
     #[test]
+    fn a_concatenated_argument_is_not_mistaken_for_a_whole_path() {
+        let found = endpoints(
+            r#"fetch("/ap" + rest); axios.get("/gate" + tail);"#,
+            "inline",
+        );
+        assert!(found.is_empty());
+    }
+
+    #[test]
+    fn a_call_with_options_after_the_path_is_still_read() {
+        let found = endpoints(r#"fetch("/api/keep", { method: "GET" })"#, "inline");
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].path, "/api/keep");
+    }
+
+    #[test]
     fn a_template_literal_is_parameterised() {
         assert!(paths().contains(&"delete /api/v1/sessions/{sessionId}".to_owned()));
     }

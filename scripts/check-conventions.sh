@@ -27,8 +27,8 @@ for file in $sources; do
   done < <(grep -nE "$comment_re" "$file" | cut -d: -f1 | sed 's/$/:/')
 done
 
-domain_re='(^|[^[:alnum:]_])(axum|reqwest|scraper|regex|sha2)::|sqlx::(query|PgPool|Pool)|crate::(infrastructure|application)'
-application_re='(^|[^[:alnum:]_])(axum|reqwest|scraper|sha2)::|sqlx::(query|PgPool|Pool)|crate::infrastructure'
+domain_re='(^|[^[:alnum:]_])(axum|reqwest|scraper|regex|sha2|chromiumoxide|tenet_browser)::|sqlx::(query|PgPool|Pool)|crate::(infrastructure|application)'
+application_re='(^|[^[:alnum:]_])(axum|reqwest|scraper|sha2|chromiumoxide|tenet_browser)::|sqlx::(query|PgPool|Pool)|crate::infrastructure'
 
 check_layer() {
   layer=$1

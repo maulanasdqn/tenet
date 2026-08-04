@@ -6,6 +6,7 @@ members = [
   "tenet-config",
   "tenet-database",
   "tenet-web",
+  "tenet-browser",
   "tenet-spec",
   "tenet-mobile",
   "tenet-gateway",
@@ -62,6 +63,7 @@ tenet-errors = { path = "tenet-errors" }
 tenet-config = { path = "tenet-config" }
 tenet-database = { path = "tenet-database" }
 tenet-web = { path = "tenet-web" }
+tenet-browser = { path = "tenet-browser" }
 tenet-spec = { path = "tenet-spec" }
 tenet-mobile = { path = "tenet-mobile" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
@@ -71,6 +73,8 @@ tower-http = { version = "0.6", features = ["trace"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate", "macros"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "gzip", "brotli", "deflate", "json"] }
 scraper = "0.21"
+chromiumoxide = "0.9"
+tempfile = "3"
 regex = "1"
 sha2 = "0.10"
 hex = "0.4"
@@ -92,3 +96,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+[profile.release.package.chromiumoxide_cdp]
+opt-level = 0
+
+[profile.release.package.chromiumoxide_pdl]
+opt-level = 0
+
+[profile.release.package.chromiumoxide_types]
+opt-level = 0
