@@ -1,0 +1,13 @@
+[package]
+name = "tenet-web"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tenet-types.workspace = true
+regex.workspace = true
+scraper.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+[package]
+name = "tenet-errors"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+axum.workspace = true
+garde.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

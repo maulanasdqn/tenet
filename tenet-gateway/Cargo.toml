@@ -1,0 +1,28 @@
+[package]
+name = "tenet-gateway"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tenet-types.workspace = true
+tenet-errors.workspace = true
+tenet-config.workspace = true
+tenet-database.workspace = true
+tenet-spec.workspace = true
+tokio.workspace = true
+axum.workspace = true
+tower-http.workspace = true
+sqlx.workspace = true
+garde.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+utoipa.workspace = true
+utoipa-swagger-ui.workspace = true
+ulid.workspace = true
+url.workspace = true
+chrono.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,94 @@
+[workspace]
+resolver = "2"
+members = [
+  "tenet-types",
+  "tenet-errors",
+  "tenet-config",
+  "tenet-database",
+  "tenet-web",
+  "tenet-spec",
+  "tenet-mobile",
+  "tenet-gateway",
+  "tenet-analyzer",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "allow"
+unused_qualifications = "warn"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+missing_docs_in_private_items = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+doc_markdown = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_lossless = "allow"
+cast_sign_loss = "allow"
+trivially_copy_pass_by_ref = "allow"
+needless_pass_by_value = "allow"
+duration_suboptimal_units = "allow"
+
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+disallowed_methods = "deny"
+disallowed_types = "deny"
+
+too_many_lines = "warn"
+cognitive_complexity = "warn"
+excessive_nesting = "warn"
+redundant_clone = "warn"
+
+[workspace.dependencies]
+tenet-types = { path = "tenet-types" }
+tenet-errors = { path = "tenet-errors" }
+tenet-config = { path = "tenet-config" }
+tenet-database = { path = "tenet-database" }
+tenet-web = { path = "tenet-web" }
+tenet-spec = { path = "tenet-spec" }
+tenet-mobile = { path = "tenet-mobile" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+axum = "0.8"
+tower-http = { version = "0.6", features = ["trace"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate", "macros"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "gzip", "brotli", "deflate", "json"] }
+scraper = "0.21"
+regex = "1"
+sha2 = "0.10"
+hex = "0.4"
+futures-util = "0.3"
+garde = { version = "0.23", features = ["derive", "url"] }
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "9", features = ["axum", "vendored"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["serde", "v4"] }
+ulid = "1"
+url = "2"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+async-trait = "0.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

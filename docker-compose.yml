@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tenet
+      POSTGRES_PASSWORD: tenet
+      POSTGRES_DB: tenet
+    ports:
+      - "5432:5432"
+  sample-target:
+    image: nginx:alpine
+    ports:
+      - "8099:80"

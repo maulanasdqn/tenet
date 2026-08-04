@@ -1,0 +1,15 @@
+[package]
+name = "tenet-mobile"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tenet-types.workspace = true
+tenet-errors.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+
+[lints]
+workspace = true

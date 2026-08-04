@@ -1,0 +1,19 @@
+avoid-breaking-exported-api = false
+
+too-many-lines-threshold = 80
+too-many-arguments-threshold = 7
+cognitive-complexity-threshold = 20
+excessive-nesting-threshold = 4
+type-complexity-threshold = 250
+single-char-binding-names-threshold = 4
+
+disallowed-methods = [
+  { path = "std::env::var", reason = "read settings through tenet_config::Config" },
+  { path = "std::env::var_os", reason = "read settings through tenet_config::Config" },
+  { path = "std::thread::sleep", reason = "blocks the tokio runtime; use tokio::time::sleep" },
+]
+
+disallowed-types = [
+  { path = "std::sync::Mutex", reason = "blocks the tokio runtime; use tokio::sync::Mutex" },
+  { path = "std::sync::RwLock", reason = "blocks the tokio runtime; use tokio::sync::RwLock" },
+]
