@@ -52,10 +52,16 @@ Only the analyzer's `infrastructure/browser/` may depend on it.
 
 `tenet-stealth` is pure and has zero dependencies. It produces plain data — launch args, an
 injectable init script, a `StealthProfile` (user agent, client hints, languages, webgl strings)
-derived from the browser's real user agent, a deterministic settle-delay jitter, and
-`detect_challenge` — and never touches chromiumoxide. `tenet-browser` translates a `StealthProfile`
-into CDP calls in `stealth_apply.rs`; the analyzer maps a detected challenge to a finding. Keeping
-it dependency-free is deliberate: the whole crate is unit-testable without a browser.
+derived from the browser's real user agent, a deterministic settle-delay jitter, `detect_challenge`,
+and `interaction_plan` (a seeded human-like sequence of mouse moves, scrolls and dwells) — and never
+touches chromiumoxide. `tenet-browser` translates a `StealthProfile` into CDP calls in
+`stealth_apply.rs` and plays the interaction plan through Chrome's real input pipeline in
+`humanize.rs`; the analyzer maps a detected challenge to a finding. Keeping it dependency-free is
+deliberate: the whole crate is unit-testable without a browser. The behaviour pass exists because a
+session with zero mouse/scroll events is the classic bot tell — `BROWSER_BEHAVIOR=1` (default) turns
+`moves_0/wheels_0` into real interaction. `examples/automation-detection.md` is the six-layer map of
+why a real browser passes and automation is blocked, and which layers stealth reaches (not TLS/JA3
+for the `http` engine, not IP reputation, not the server-side risk engine).
 
 `tenet-wasm` reverse-engineers a WebAssembly binary with `wasmparser`: `analyze(bytes)` returns a
 `WasmReport` — imports (host calls), exports, function/memory counts, data-segment strings, the

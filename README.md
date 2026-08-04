@@ -111,10 +111,17 @@ languages, plugins, vendor and WebGL strings, and a small randomized settle dela
 default; `BROWSER_STEALTH=0` disables it and `BROWSER_REGION=id` sets a country-appropriate
 `Accept-Language`.
 
+With `BROWSER_BEHAVIOR=1` (default) it also plays a human-like interaction pass — mouse moves,
+scrolls and dwells through Chrome's real input pipeline — because a session with zero mouse or scroll
+events is the classic bot tell (measured: `moves_0/wheels_0` becomes `moves_19/wheels_12`).
+
 This normalizes the browser — it does not solve CAPTCHAs or defeat every protection. When a target
 serves a challenge anyway, Tenet detects the interstitial and records a `bot-protection` finding, so
-a thin result is explained rather than mistaken for a site with no API. Use it only on targets you
-own or are authorised to assess, and respect their rate limits.
+a thin result is explained rather than mistaken for a site with no API. The `http` engine's TLS
+fingerprint is still not Chrome's, IP reputation is unaddressed, and a server-side risk engine can
+still win — [`examples/automation-detection.md`](examples/automation-detection.md) maps the six
+detection layers, which stealth reaches, and which it does not. Use it only on targets you own or
+are authorised to assess, and respect their rate limits.
 
 Endpoint extraction reads four signals and keeps the strongest per `method path`: observed runtime
 calls (0.95, browser engine only), method calls (`axios.post("/api/v1/sessions")` → 0.85), fetch

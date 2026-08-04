@@ -34,6 +34,7 @@ impl Config {
             browser_settle_jitter_ms: env_parse("BROWSER_SETTLE_JITTER_MS", "750")?,
             browser_quiet_ms: env_parse("BROWSER_QUIET_MS", "500")?,
             browser_stealth: env_flag_default("BROWSER_STEALTH", "1"),
+            browser_behavior: env_flag_default("BROWSER_BEHAVIOR", "1"),
             browser_region: env_or("BROWSER_REGION", ""),
         })
     }

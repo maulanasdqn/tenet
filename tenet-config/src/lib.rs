@@ -37,5 +37,6 @@ pub struct Config {
     pub browser_settle_jitter_ms: u64,
     pub browser_quiet_ms: u64,
     pub browser_stealth: bool,
+    pub browser_behavior: bool,
     pub browser_region: String,
 }

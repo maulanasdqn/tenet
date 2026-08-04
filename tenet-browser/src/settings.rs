@@ -10,6 +10,7 @@ const CANDIDATES: [&str; 6] = [
 ];
 
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct RenderSettings {
     pub chrome_bin: String,
     pub chrome_ws_url: String,
@@ -22,6 +23,7 @@ pub struct RenderSettings {
     pub settle_jitter_ms: u64,
     pub quiet_ms: u64,
     pub stealth: bool,
+    pub behavior: bool,
     pub region: String,
 }
 
@@ -68,6 +70,7 @@ mod tests {
             settle_jitter_ms: 0,
             quiet_ms: 500,
             stealth: true,
+            behavior: true,
             region: String::new(),
         }
     }

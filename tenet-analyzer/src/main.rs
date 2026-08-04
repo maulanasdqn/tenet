@@ -109,6 +109,7 @@ fn render_settings(config: &Config) -> RenderSettings {
         settle_jitter_ms: config.browser_settle_jitter_ms,
         quiet_ms: config.browser_quiet_ms,
         stealth: config.browser_stealth,
+        behavior: config.browser_behavior,
         region: config.browser_region.clone(),
     }
 }

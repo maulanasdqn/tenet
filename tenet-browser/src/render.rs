@@ -73,6 +73,14 @@ impl ChromiumRenderer {
     async fn visit(&self, page: &Page, url: &str) -> Result<RenderedPage, AppError> {
         let capture = NetworkCapture::watch(page).await;
         self.navigate(page, url).await?;
+        if self.settings.behavior {
+            let plan = tenet_stealth::interaction_plan(
+                self.settings.viewport_width,
+                self.settings.viewport_height,
+                url,
+            );
+            crate::humanize::humanize(page, &plan).await;
+        }
         let settle = tenet_stealth::settle_delay(
             self.settings.settle_ms,
             self.settings.settle_jitter_ms,
