@@ -47,6 +47,10 @@ curl localhost:8080/v1/scans/$SCAN/openapi   -H 'x-api-key: dev-key' > api.json
 Swagger UI is at `localhost:8080/docs`. Every route except `/healthz` and the docs wants
 `x-api-key` (or `Authorization: Bearer <key>`), matched against `API_KEY`.
 
+`scripts/sample-scan.sh <target> <engine>` does all of the above in one go and prints a readable
+report. [`examples/shopee.md`](examples/shopee.md) is a real run against a production SPA — 1
+endpoint with `http`, 58 with `browser`.
+
 ## API
 
 | Method | Path | Purpose |
@@ -154,3 +158,6 @@ cargo test --workspace
   request bodies, so this is mostly a matter of recording them.
 - **Authenticated scanning.** The browser engine renders as an anonymous visitor. Driving a login
   first would expose the endpoints that only exist behind a session.
+- **Telling an API from a CDN payload.** Every observed `fetch` is recorded, so content assets
+  pulled at runtime sit alongside real API calls — on the Shopee sample that is 24 rows of noise
+  against 21 useful ones. Classifying by response content type or origin role would fix it.

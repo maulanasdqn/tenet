@@ -48,11 +48,20 @@ impl ExportOpenapi {
         Ok(tenet_spec::build(&SpecInput {
             title: &scan.target,
             version: SPEC_VERSION,
-            server: None,
+            server: target_origin(&scan.target).as_deref(),
             endpoints: &endpoints,
             auth_schemes: &schemes,
         }))
     }
+}
+
+fn target_origin(target: &str) -> Option<String> {
+    let parsed = url::Url::parse(target).ok()?;
+    let origin = parsed.origin();
+    if origin.is_tuple() {
+        return Some(origin.ascii_serialization());
+    }
+    None
 }
 
 fn as_endpoint(record: &EndpointRecord) -> Endpoint {
@@ -88,7 +97,18 @@ mod tests {
 
     use crate::domain::artifact::FindingRecord;
 
-    use super::auth_schemes;
+    use super::{auth_schemes, target_origin};
+
+    #[test]
+    fn the_scan_target_becomes_the_spec_server() {
+        let origin = target_origin("https://shopee.co.id/some/page?x=1");
+        assert_eq!(origin, Some("https://shopee.co.id".to_owned()));
+    }
+
+    #[test]
+    fn a_target_that_is_not_a_url_has_no_origin() {
+        assert_eq!(target_origin("com.example.app"), None);
+    }
 
     fn finding(kind: &str, name: &str) -> FindingRecord {
         FindingRecord {
