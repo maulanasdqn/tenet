@@ -80,6 +80,8 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 scraper = "0.21"
 wasmparser = "0.244"
 base64 = "0.22"
+object = "0.36"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 chromiumoxide = "0.9"
 tempfile = "3"
 regex = "1"

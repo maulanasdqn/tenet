@@ -4,7 +4,7 @@ A reverse engineering framework for understanding what an application is actuall
 what it actually talks to. Point it at a website and it returns the technology stack, the private
 API it calls, how that API is authenticated, and an OpenAPI document you can hand to a client
 generator. It can read the served HTML, or drive a real browser and watch the calls the app makes
-after it hydrates. Mobile binaries are next.
+after it hydrates. It also unpacks a mobile APK and reverse-engineers the native `.so` inside.
 
 Tenet only reads what a target already serves to any browser. Use it on systems you own or are
 authorised to assess.
@@ -147,9 +147,9 @@ because a path constant is real evidence — that is what the 0.45 confidence is
 | `tenet-web` | Fingerprints, script harvesting, endpoint and auth extraction |
 | `tenet-stealth` | Fingerprint normalization, launch args, challenge detection (pure, no deps) |
 | `tenet-wasm` | WebAssembly reverse engineering: imports, exports, strings, toolchain, signals |
+| `tenet-mobile` | Native binary RE: unpacks an APK, parses its `.so` (ELF) — JNI methods, imports, strings, anti-fraud signals |
 | `tenet-browser` | Chromium driver: renders a page and captures its live requests |
 | `tenet-spec` | OpenAPI 3.1 generation |
-| `tenet-mobile` | `BinaryAnalyzer` port and the pending implementation |
 | `tenet-gateway` | HTTP API |
 | `tenet-analyzer` | Claim loop and analysis pipeline |
 
@@ -179,10 +179,12 @@ cargo test --workspace
 
 ## Roadmap
 
-- **Mobile binaries.** `tenet-mobile` already defines the `BinaryAnalyzer` port and routes mobile
-  scans to it; APK and IPA unpacking, string and manifest extraction are the missing implementation.
+- **iOS binaries.** `tenet-mobile` unpacks an APK and parses its ARM64 `.so`; an IPA carries a Mach-O
+  binary instead, which the same `object` parser handles — the missing piece is IPA (zip) unpacking
+  and a Mach-O path in `native.rs`. Disassembling the native routine (not just its symbols and
+  strings) is the deeper follow-on.
 - **Secret detection.** `FindingKind::Secret` exists and is unused — API keys and tokens left in
-  bundles are the obvious next finding type.
+  bundles or native binaries are the obvious next finding type.
 - **Request shapes.** Endpoints carry a method and a path; bodies, query parameters and response
   schemas would make the generated spec directly usable. The browser engine already sees real
   request bodies, so this is mostly a matter of recording them.

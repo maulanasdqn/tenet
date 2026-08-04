@@ -5,3 +5,8 @@
 
 # nested example build output
 examples/*/target
+
+# native example build output
+examples/rkm-sec-native/*.so
+examples/rkm-sec-native/*.apk
+examples/rkm-sec-native/pkg/

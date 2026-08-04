@@ -20,7 +20,6 @@ use infrastructure::scan_loop::run_scan_loop;
 use tenet_browser::RenderSettings;
 use tenet_config::Config;
 use tenet_errors::AppError;
-use tenet_mobile::PendingBinaryAnalyzer;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let analyzers = Analyzers {
         web: Arc::new(AnalyzeWebTarget::new(fetcher.clone())),
         rendered: build_rendered(&config, &fetcher).await,
-        mobile: Arc::new(AnalyzeMobileTarget::new(Arc::new(PendingBinaryAnalyzer))),
+        mobile: Arc::new(AnalyzeMobileTarget::new(fetcher.clone())),
     };
 
     let queue = Arc::new(PostgresScanQueue::new(pool.clone()));

@@ -5,11 +5,8 @@ edition.workspace = true
 
 [dependencies]
 tenet-types.workspace = true
-tenet-errors.workspace = true
-async-trait.workspace = true
-
-[dev-dependencies]
-tokio.workspace = true
+object.workspace = true
+zip.workspace = true
 
 [lints]
 workspace = true

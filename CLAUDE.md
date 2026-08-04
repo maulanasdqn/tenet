@@ -37,7 +37,7 @@ Shared crates: `tenet-types` (`TargetKind`, `Engine`, `ScanStatus`, `Finding`, `
 (env loading, tracing init, shutdown token), `tenet-database` (pool), `tenet-web` (the static
 website engine), `tenet-stealth` (fingerprint normalization + challenge detection), `tenet-wasm`
 (WebAssembly reverse engineering), `tenet-browser` (the Chromium driver), `tenet-spec` (OpenAPI
-generation), `tenet-mobile` (binary analysis seam).
+generation), `tenet-mobile` (native APK/`.so` reverse engineering).
 
 Services: `tenet-gateway` (HTTP 8080), `tenet-analyzer` (no listener, polls Postgres).
 
@@ -62,6 +62,17 @@ session with zero mouse/scroll events is the classic bot tell — `BROWSER_BEHAV
 `moves_0/wheels_0` into real interaction. `examples/automation-detection.md` is the six-layer map of
 why a real browser passes and automation is blocked, and which layers stealth reaches (not TLS/JA3
 for the `http` engine, not IP reputation, not the server-side risk engine).
+
+`tenet-mobile` reverse-engineers a native mobile binary. `analyze_binary(reference, bytes)` detects
+an APK (a zip) and unpacks its `lib/*/*.so`, or parses a raw `.so` directly; `native::analyze_so`
+uses the `object` crate to read the ELF — format, architecture, exported symbols (flagging JNI
+`Java_*` methods), imported symbols and needed libraries, and printable strings from the data/rodata
+sections — then `signals::detect` flags fingerprint / request-signing / root-detection /
+emulator-detection / tls-pinning / crypto behaviour. It is pure (bytes in, `BinaryReport` out), so it
+is tested against real fixtures — `tests/fixtures/librkmsec.so` (an ARM64 ELF) and `rkm-market.apk` —
+built from `examples/rkm-sec-native`. The analyzer fetches the apk/`.so` bytes for a `kind=mobile`
+scan and turns the report into findings and endpoints; a non-url mobile target is a permanent
+`BadRequest` (you can't fetch a package name).
 
 `tenet-wasm` reverse-engineers a WebAssembly binary with `wasmparser`: `analyze(bytes)` returns a
 `WasmReport` — imports (host calls), exports, function/memory counts, data-segment strings, the
@@ -200,6 +211,6 @@ Findings and endpoints are deduped by identity, keeping the highest confidence �
 is `kind:name:value` and `Endpoint::identity` is `method path`. The unique constraints in
 `migrations/` mirror those identities, so a re-scan is idempotent.
 
-Mobile targets route to `tenet-mobile`, whose `PendingBinaryAnalyzer` reports that binary analysis
-is unavailable. Implementing `BinaryAnalyzer` for real is the only change needed to light that path
-up — the queue, retry ladder, storage and read API already handle it.
+Mobile targets route to `AnalyzeMobileTarget`, which fetches the apk/`.so` at the target url and
+runs `tenet_mobile::analyze_binary`. It shares the same queue, retry ladder, storage and read API as
+the web engines — a mobile scan produces findings and endpoints just like a web scan.
