@@ -56,6 +56,39 @@ Three capabilities, all visible in a scan's findings and endpoints:
   WASM toolchain          rustc 1.96.0   (read from the wasm producers section)
   ```
 
+## Does Shopee's web ship WASM? No — and that's the real lesson
+
+The obvious next move is "download Shopee's security WASM and reverse it." It doesn't exist. Searched
+with Tenet plus curl across 382 KB of Shopee's security JavaScript — the homepage shell, all 11
+`antifraudivs` bundles, `tracking-core` / `tracking-algo` / `tracking-ubt`, the `/verify/traffic`
+challenge page, and its four `polyfill.*.js` — and a live render of the homepage:
+
+| Signal searched | Hits |
+| --- | --- |
+| `WebAssembly` / `.wasm` / `AGFzbQ` (base64 `\0asm`) | **0** |
+| Heavy obfuscation (`_0x…` string arrays, `eval`, `fromCharCode` packing) | **0** |
+| `.wasm` fetched during a live browser render | **0** (Tenet's own wasm-module detector reported none) |
+
+What the bundles actually are: `antifraudivs` is the trusted-device account-security UI (plain
+minified React); the tracking SDK is analytics (UBT); the verify page's big "sensor" is a JSON asset
+manifest and its polyfills are real polyfills. No client-side canvas/WebGL/audio fingerprinting
+blob, no WASM, not even string-array obfuscation.
+
+So where is the security? **Server-side, at the `SGW` gateway.** The risk scoring and the tiered
+403/`action_type:2` gating happen where a client cannot see or reverse them. The client only
+collects light signals (`SPC_F`, device id) that the gateway evaluates.
+
+The verdict on "is it secure enough": yes, and for the right reason — Shopee does **not** stake its
+security on client-side WASM or obfuscation being unbreakable. That is exactly correct. Client-side
+WASM/obfuscation is defense-in-depth (it raises the cost of reading the client); it is never the
+wall. The wall is the server.
+
+For RKM this inverts the intuition: the `examples/rkm-sec-wasm` token module is *more*
+client-obfuscated than anything Shopee ships — but that is not what makes a site secure. Treat the
+WASM token as optional defense-in-depth and put the real budget into the server-side gate:
+Cloudflare WAF + a Worker that validates tokens and rate-limits + tiered endpoint gating. That is
+the part an attacker with Tenet cannot reverse.
+
 ## The mirror image: hardening RKM
 
 `market.rajawalikaryamulya.co.id` runs Cloudflare + a Vite SPA + Midtrans, on a Cloudflare Workers +
