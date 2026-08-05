@@ -1,14 +1,15 @@
 import { useQueries } from "@tanstack/react-query";
+import { useStore } from "@tanstack/react-store";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { api, scanKeys } from "@/lib/api";
-import { recentScans } from "@/lib/settings";
+import { recentScansStore } from "@/lib/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
 
 export function RecentScans() {
-  const scans = recentScans();
+  const scans = useStore(recentScansStore, (state) => state);
   const statuses = useQueries({
     queries: scans.map((scan) => ({
       queryKey: scanKeys.detail(scan.scan_id),

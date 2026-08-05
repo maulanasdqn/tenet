@@ -7,6 +7,7 @@ import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Confidence, SeverityBadge } from "@/components/status-badge";
+import { DetailField } from "@/components/detail";
 
 export function FindingsTable({ scanId }: { scanId: string }) {
   const query = useQuery({
@@ -51,5 +52,30 @@ export function FindingsTable({ scanId }: { scanId: string }) {
   if (query.isLoading) return <Skeleton className="h-64 w-full" />;
   if (query.isError) return <p className="text-sm text-destructive">{(query.error as Error).message}</p>;
 
-  return <DataTable columns={columns} data={query.data ?? []} filterPlaceholder="Filter findings…" />;
+  return (
+    <DataTable
+      columns={columns}
+      data={query.data ?? []}
+      filterPlaceholder="Filter findings…"
+      renderDetail={(finding) => (
+        <div className="flex flex-col">
+          <div className="mb-2 flex items-center gap-2">
+            <Badge variant="outline">{finding.kind}</Badge>
+            <span className="font-medium">{finding.name}</span>
+            <SeverityBadge severity={finding.severity} />
+          </div>
+          <DetailField label="Value">{finding.value ?? "—"}</DetailField>
+          <DetailField label="Confidence">
+            <Confidence value={finding.confidence} />
+          </DetailField>
+          <DetailField label="Evidence">
+            <span className="text-muted-foreground">{finding.evidence ?? "—"}</span>
+          </DetailField>
+          <DetailField label="Discovered">
+            {new Date(finding.created_at).toLocaleString()}
+          </DetailField>
+        </div>
+      )}
+    />
+  );
 }

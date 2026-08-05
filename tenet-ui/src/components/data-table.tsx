@@ -1,15 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   type ColumnDef,
+  type PaginationState,
   type SortingState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Search } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Search,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -19,26 +37,45 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const PAGE_SIZES = [10, 20, 50, 100];
+
 interface DataTableProps<T> {
   columns: ColumnDef<T, unknown>[];
   data: T[];
   filterPlaceholder?: string;
+  renderDetail?: (row: T) => ReactNode;
 }
 
-export function DataTable<T>({ columns, data, filterPlaceholder }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data, filterPlaceholder, renderDetail }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [detail, setDetail] = useState<T | null>(null);
+
+  useEffect(() => {
+    if (!detail) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDetail(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [detail]);
 
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, globalFilter },
+    state: { sorting, globalFilter, pagination },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
+
+  const pageCount = table.getPageCount();
+  const rowCount = table.getFilteredRowModel().rows.length;
 
   return (
     <div className="flex flex-col gap-3">
@@ -76,7 +113,11 @@ export function DataTable<T>({ columns, data, filterPlaceholder }: DataTableProp
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  onClick={renderDetail ? () => setDetail(row.original) : undefined}
+                  className={renderDetail ? "cursor-pointer" : ""}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -94,7 +135,89 @@ export function DataTable<T>({ columns, data, filterPlaceholder }: DataTableProp
           </TableBody>
         </Table>
       </div>
-      <p className="text-xs text-muted-foreground">{table.getRowModel().rows.length} rows</p>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{rowCount} rows</span>
+          <span>·</span>
+          <span>Rows per page</span>
+          <Select
+            value={String(pagination.pageSize)}
+            onValueChange={(value) => table.setPageSize(Number(value))}
+          >
+            <SelectTrigger className="h-7 w-[4.5rem]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZES.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            Page {pageCount === 0 ? 0 : pagination.pageIndex + 1} of {pageCount}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <ChevronsLeft className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => table.setPageIndex(pageCount - 1)}
+            disabled={!table.getCanNextPage()}
+          >
+            <ChevronsRight className="size-4" />
+          </Button>
+        </div>
+      </div>
+
+      {detail && renderDetail ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setDetail(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-2 flex justify-end">
+              <Button variant="ghost" size="icon" className="size-7" onClick={() => setDetail(null)}>
+                <X className="size-4" />
+              </Button>
+            </div>
+            {renderDetail(detail)}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

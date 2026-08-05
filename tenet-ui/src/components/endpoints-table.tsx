@@ -7,6 +7,7 @@ import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Confidence } from "@/components/status-badge";
+import { CopyButton, DetailField } from "@/components/detail";
 
 const METHOD_TONE: Record<string, string> = {
   get: "text-sky-400",
@@ -66,5 +67,44 @@ export function EndpointsTable({ scanId }: { scanId: string }) {
   if (query.isLoading) return <Skeleton className="h-64 w-full" />;
   if (query.isError) return <p className="text-sm text-destructive">{(query.error as Error).message}</p>;
 
-  return <DataTable columns={columns} data={query.data ?? []} filterPlaceholder="Filter endpoints…" />;
+  return (
+    <DataTable
+      columns={columns}
+      data={query.data ?? []}
+      filterPlaceholder="Filter endpoints…"
+      renderDetail={(endpoint) => {
+        const fullUrl = `${endpoint.base_url ?? ""}${endpoint.path}`;
+        return (
+          <div className="flex flex-col">
+            <div className="mb-2 flex items-center gap-2">
+              <span className={`font-mono text-sm font-semibold uppercase ${METHOD_TONE[endpoint.method] ?? ""}`}>
+                {endpoint.method}
+              </span>
+              <span className="break-all font-mono text-sm">{endpoint.path}</span>
+            </div>
+            <DetailField label="Full URL">
+              <div className="flex items-start justify-between gap-3">
+                <span className="break-all font-mono text-xs">{fullUrl}</span>
+                <CopyButton value={fullUrl} />
+              </div>
+            </DetailField>
+            <DetailField label="Origin">
+              <span className="font-mono text-xs">{endpoint.base_url ?? "— (relative)"}</span>
+            </DetailField>
+            <DetailField label="Source">
+              <Badge variant={endpoint.source === "runtime" ? "success" : "secondary"}>
+                {endpoint.source}
+              </Badge>
+            </DetailField>
+            <DetailField label="Confidence">
+              <Confidence value={endpoint.confidence} />
+            </DetailField>
+            <DetailField label="Discovered">
+              {new Date(endpoint.created_at).toLocaleString()}
+            </DetailField>
+          </div>
+        );
+      }}
+    />
+  );
 }

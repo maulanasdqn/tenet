@@ -1,4 +1,4 @@
-import { getApiKey, getBaseUrl } from "./settings";
+import { settingsStore } from "./store";
 import type {
   CreateScanInput,
   EndpointRow,
@@ -10,11 +10,12 @@ import type {
 } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getBaseUrl()}${path}`, {
+  const { baseUrl, apiKey } = settingsStore.state;
+  const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
       "content-type": "application/json",
-      "x-api-key": getApiKey(),
+      "x-api-key": apiKey,
       ...(init?.headers ?? {}),
     },
   });
@@ -27,7 +28,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health(): Promise<Response> {
-    return fetch(`${getBaseUrl()}/healthz`);
+    return fetch(`${settingsStore.state.baseUrl}/healthz`);
   },
   createScan(input: CreateScanInput): Promise<SingleResponse<ScanCreated>> {
     return request("/v1/scans", { method: "POST", body: JSON.stringify(input) });
